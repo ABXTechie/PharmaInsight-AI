@@ -10,6 +10,10 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import Customers from "./pages/customers/Customers";
+import CustomerDetails from "./pages/customers/CustomerDetails";
+import Products from "./pages/products/Products";
+
 
 const App = () => {
   return (
@@ -27,6 +31,9 @@ const App = () => {
               path="/dashboard"
               element={<Dashboard />}
             />
+            <Route path="customers" element={<Customers />} />
+            <Route path="customers/:id" element={<CustomerDetails />} />
+            <Route path="products" element={<Products />} />
           </Route>
         </Route>
 
