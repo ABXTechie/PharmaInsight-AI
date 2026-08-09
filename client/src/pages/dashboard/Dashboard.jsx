@@ -17,7 +17,7 @@ const Dashboard = () => {
       value: "0",
     },
     {
-      label: "Medicines",
+      label: "Products",
       value: "0",
     },
     {

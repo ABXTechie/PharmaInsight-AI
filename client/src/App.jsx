@@ -13,6 +13,9 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import Customers from "./pages/customers/Customers";
 import CustomerDetails from "./pages/customers/CustomerDetails";
 import Products from "./pages/products/Products";
+import Sales from "./pages/sales/Sales";
+import SaleForm from "./pages/sales/SaleForm";
+import SaleDetails from "./pages/sales/SaleDetails";
 
 
 const App = () => {
@@ -34,6 +37,9 @@ const App = () => {
             <Route path="customers" element={<Customers />} />
             <Route path="customers/:id" element={<CustomerDetails />} />
             <Route path="products" element={<Products />} />
+            <Route path="sales" element={<Sales />} />
+            <Route path="sales/new" element={<SaleForm />} />
+            <Route path="sales/:id" element={<SaleDetails />} />
           </Route>
         </Route>
 

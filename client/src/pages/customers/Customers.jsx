@@ -183,11 +183,11 @@ const Customers = () => {
                   </td>
 
                   <td className="px-6 py-4 font-medium text-slate-900">
-                    —
+                    ₹{Number(customer.thisMonthSales || 0).toLocaleString("en-IN")}
                   </td>
 
                   <td className="px-6 py-4 font-medium text-slate-900">
-                    —
+                    ₹{Number(customer.lifetimeSales || 0).toLocaleString("en-IN")}
                   </td>
 
                   <td className="px-6 py-4 text-right">
