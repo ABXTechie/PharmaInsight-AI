@@ -13,7 +13,8 @@ import {
 import customerRoutes from "./routes/customerRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import saleRoutes from "./routes/saleRoutes.js";
-
+import analyticsRoutes from "./routes/analyticsRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
 
 dotenv.config();
 
@@ -44,6 +45,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/sales", saleRoutes);
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/reports", reportRoutes);
 
 app.use(notFound);
 

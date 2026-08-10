@@ -16,6 +16,7 @@ import Products from "./pages/products/Products";
 import Sales from "./pages/sales/Sales";
 import SaleForm from "./pages/sales/SaleForm";
 import SaleDetails from "./pages/sales/SaleDetails";
+import Reports from "./pages/reports/Reports";
 
 
 const App = () => {
@@ -40,6 +41,7 @@ const App = () => {
             <Route path="sales" element={<Sales />} />
             <Route path="sales/new" element={<SaleForm />} />
             <Route path="sales/:id" element={<SaleDetails />} />
+            <Route path="reports" element={<Reports />} />
           </Route>
         </Route>
 
