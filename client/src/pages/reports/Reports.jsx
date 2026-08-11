@@ -4,7 +4,7 @@ import {
   downloadSalesReportPDF,
   getCustomerSalesReport,
   getProductSalesReport,
-  getMonthlySalesReport
+  getMonthlySalesReport,
 } from "../../services/reportService";
 
 const Reports = () => {
@@ -229,7 +229,7 @@ const Reports = () => {
             </div>
           </div>
 
-          {/* Sales Table */}
+          {/* Sales Table / Cards */}
           <div className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 p-6">
               <h2 className="font-semibold text-slate-900">
@@ -246,63 +246,107 @@ const Reports = () => {
                 No sales found for the selected period.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[700px] text-left text-sm">
-                  <thead className="border-b border-slate-200 bg-slate-50">
-                    <tr>
-                      <th className="px-6 py-4 font-medium text-slate-600">
-                        Date
-                      </th>
+              <>
+                <div className="hidden overflow-x-auto lg:block">
+                  <table className="w-full min-w-[700px] text-left text-sm">
+                    <thead className="border-b border-slate-200 bg-slate-50">
+                      <tr>
+                        <th className="px-6 py-4 font-medium text-slate-600">
+                          Date
+                        </th>
 
-                      <th className="px-6 py-4 font-medium text-slate-600">
-                        Customer
-                      </th>
+                        <th className="px-6 py-4 font-medium text-slate-600">
+                          Customer
+                        </th>
 
-                      <th className="px-6 py-4 font-medium text-slate-600">
-                        Items
-                      </th>
+                        <th className="px-6 py-4 font-medium text-slate-600">
+                          Items
+                        </th>
 
-                      <th className="px-6 py-4 text-right font-medium text-slate-600">
-                        Amount
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {report.sales.map((sale) => (
-                      <tr
-                        key={sale.saleId}
-                        className="border-b border-slate-100 last:border-b-0"
-                      >
-                        <td className="px-6 py-4 text-slate-700">
-                          {new Date(sale.date).toLocaleDateString(
-                            "en-IN"
-                          )}
-                        </td>
-
-                        <td className="px-6 py-4">
-                          <p className="font-medium text-slate-900">
-                            {sale.shopName}
-                          </p>
-
-                          <p className="text-xs text-slate-500">
-                            {sale.customer}
-                          </p>
-                        </td>
-
-                        <td className="px-6 py-4 text-slate-700">
-                          {sale.itemCount}
-                        </td>
-
-                        <td className="px-6 py-4 text-right font-medium text-slate-900">
-                          ₹
-                          {sale.amount.toLocaleString("en-IN")}
-                        </td>
+                        <th className="px-6 py-4 text-right font-medium text-slate-600">
+                          Amount
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+
+                    <tbody>
+                      {report.sales.map((sale) => (
+                        <tr
+                          key={sale.saleId}
+                          className="border-b border-slate-100 last:border-b-0"
+                        >
+                          <td className="px-6 py-4 text-slate-700">
+                            {new Date(sale.date).toLocaleDateString(
+                              "en-IN"
+                            )}
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <p className="font-medium text-slate-900">
+                              {sale.shopName}
+                            </p>
+
+                            <p className="text-xs text-slate-500">
+                              {sale.customer}
+                            </p>
+                          </td>
+
+                          <td className="px-6 py-4 text-slate-700">
+                            {sale.itemCount}
+                          </td>
+
+                          <td className="px-6 py-4 text-right font-medium text-slate-900">
+                            ₹
+                            {sale.amount.toLocaleString("en-IN")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="space-y-3 p-4 lg:hidden">
+                  {report.sales.map((sale) => (
+                    <div
+                      key={sale.saleId}
+                      className="rounded-xl border border-slate-200 bg-white p-4"
+                    >
+                      <div>
+                        <p className="font-medium text-slate-900">
+                          {sale.shopName}
+                        </p>
+
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {sale.customer}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3">
+                        <div className="rounded-lg bg-slate-50 p-3">
+                          <p className="text-xs text-slate-500">Date</p>
+                          <p className="mt-1 text-sm text-slate-700">
+                            {new Date(sale.date).toLocaleDateString("en-IN")}
+                          </p>
+                        </div>
+
+                        <div className="rounded-lg bg-slate-50 p-3">
+                          <p className="text-xs text-slate-500">Items</p>
+                          <p className="mt-1 font-semibold text-slate-900">
+                            {sale.itemCount}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                        <p className="text-xs text-slate-500">Amount</p>
+                        <p className="mt-1 font-semibold text-slate-900">
+                          ₹{sale.amount.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </>
@@ -326,63 +370,107 @@ const Reports = () => {
               No customer sales found for the selected period.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[750px] text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50">
-                  <tr>
-                    <th className="px-6 py-4 font-medium text-slate-600">
-                      Customer
-                    </th>
+            <>
+              <div className="hidden overflow-x-auto lg:block">
+                <table className="w-full min-w-[750px] text-left text-sm">
+                  <thead className="border-b border-slate-200 bg-slate-50">
+                    <tr>
+                      <th className="px-6 py-4 font-medium text-slate-600">
+                        Customer
+                      </th>
 
-                    <th className="px-6 py-4 font-medium text-slate-600">
-                      Orders
-                    </th>
+                      <th className="px-6 py-4 font-medium text-slate-600">
+                        Orders
+                      </th>
 
-                    <th className="px-6 py-4 font-medium text-slate-600">
-                      Units
-                    </th>
+                      <th className="px-6 py-4 font-medium text-slate-600">
+                        Units
+                      </th>
 
-                    <th className="px-6 py-4 text-right font-medium text-slate-600">
-                      Revenue
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {report.map((customer) => (
-                    <tr
-                      key={customer.customerId}
-                      className="border-b border-slate-100 last:border-b-0"
-                    >
-                      <td className="px-6 py-4">
-                        <p className="font-medium text-slate-900">
-                          {customer.shopName}
-                        </p>
-
-                        <p className="text-xs text-slate-500">
-                          {customer.name}
-                        </p>
-                      </td>
-
-                      <td className="px-6 py-4 text-slate-700">
-                        {customer.totalSales.toLocaleString("en-IN")}
-                      </td>
-
-                      <td className="px-6 py-4 text-slate-700">
-                        {customer.totalUnits.toLocaleString("en-IN")}
-                      </td>
-
-                      <td className="px-6 py-4 text-right font-medium text-slate-900">
-                        ₹
-                        {customer.totalRevenue.toLocaleString(
-                          "en-IN"
-                        )}
-                      </td>
+                      <th className="px-6 py-4 text-right font-medium text-slate-600">
+                        Revenue
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+
+                  <tbody>
+                    {report.map((customer) => (
+                      <tr
+                        key={customer.customerId}
+                        className="border-b border-slate-100 last:border-b-0"
+                      >
+                        <td className="px-6 py-4">
+                          <p className="font-medium text-slate-900">
+                            {customer.shopName}
+                          </p>
+
+                          <p className="text-xs text-slate-500">
+                            {customer.name}
+                          </p>
+                        </td>
+
+                        <td className="px-6 py-4 text-slate-700">
+                          {customer.totalSales.toLocaleString("en-IN")}
+                        </td>
+
+                        <td className="px-6 py-4 text-slate-700">
+                          {customer.totalUnits.toLocaleString("en-IN")}
+                        </td>
+
+                        <td className="px-6 py-4 text-right font-medium text-slate-900">
+                          ₹
+                          {customer.totalRevenue.toLocaleString(
+                            "en-IN"
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="space-y-3 p-4 lg:hidden">
+                {report.map((customer) => (
+                  <div
+                    key={customer.customerId}
+                    className="rounded-xl border border-slate-200 bg-white p-4"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-900">
+                        {customer.shopName}
+                      </p>
+
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {customer.name}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <div className="rounded-lg bg-slate-50 p-3">
+                        <p className="text-xs text-slate-500">Orders</p>
+                        <p className="mt-1 font-semibold text-slate-900">
+                          {customer.totalSales.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+
+                      <div className="rounded-lg bg-slate-50 p-3">
+                        <p className="text-xs text-slate-500">Units</p>
+                        <p className="mt-1 font-semibold text-slate-900">
+                          {customer.totalUnits.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                      <p className="text-xs text-slate-500">Revenue</p>
+                      <p className="mt-1 font-semibold text-slate-900">
+                        ₹{customer.totalRevenue.toLocaleString("en-IN")}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -405,65 +493,109 @@ const Reports = () => {
               No product sales found for the selected period.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px] text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50">
-                  <tr>
-                    <th className="px-6 py-4 font-medium text-slate-600">
-                      Product
-                    </th>
+            <>
+              <div className="hidden overflow-x-auto lg:block">
+                <table className="w-full min-w-[800px] text-left text-sm">
+                  <thead className="border-b border-slate-200 bg-slate-50">
+                    <tr>
+                      <th className="px-6 py-4 font-medium text-slate-600">
+                        Product
+                      </th>
 
-                    <th className="px-6 py-4 font-medium text-slate-600">
-                      Company
-                    </th>
+                      <th className="px-6 py-4 font-medium text-slate-600">
+                        Company
+                      </th>
 
-                    <th className="px-6 py-4 font-medium text-slate-600">
-                      Orders
-                    </th>
+                      <th className="px-6 py-4 font-medium text-slate-600">
+                        Orders
+                      </th>
 
-                    <th className="px-6 py-4 font-medium text-slate-600">
-                      Units
-                    </th>
+                      <th className="px-6 py-4 font-medium text-slate-600">
+                        Units
+                      </th>
 
-                    <th className="px-6 py-4 text-right font-medium text-slate-600">
-                      Revenue
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {report.map((product) => (
-                    <tr
-                      key={product.productId}
-                      className="border-b border-slate-100 last:border-b-0"
-                    >
-                      <td className="px-6 py-4 font-medium text-slate-900">
-                        {product.name}
-                      </td>
-
-                      <td className="px-6 py-4 text-slate-700">
-                        {product.company}
-                      </td>
-
-                      <td className="px-6 py-4 text-slate-700">
-                        {product.totalSales.toLocaleString("en-IN")}
-                      </td>
-
-                      <td className="px-6 py-4 text-slate-700">
-                        {product.totalUnits.toLocaleString("en-IN")}
-                      </td>
-
-                      <td className="px-6 py-4 text-right font-medium text-slate-900">
-                        ₹
-                        {product.totalRevenue.toLocaleString(
-                          "en-IN"
-                        )}
-                      </td>
+                      <th className="px-6 py-4 text-right font-medium text-slate-600">
+                        Revenue
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+
+                  <tbody>
+                    {report.map((product) => (
+                      <tr
+                        key={product.productId}
+                        className="border-b border-slate-100 last:border-b-0"
+                      >
+                        <td className="px-6 py-4 font-medium text-slate-900">
+                          {product.name}
+                        </td>
+
+                        <td className="px-6 py-4 text-slate-700">
+                          {product.company}
+                        </td>
+
+                        <td className="px-6 py-4 text-slate-700">
+                          {product.totalSales.toLocaleString("en-IN")}
+                        </td>
+
+                        <td className="px-6 py-4 text-slate-700">
+                          {product.totalUnits.toLocaleString("en-IN")}
+                        </td>
+
+                        <td className="px-6 py-4 text-right font-medium text-slate-900">
+                          ₹
+                          {product.totalRevenue.toLocaleString(
+                            "en-IN"
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="space-y-3 p-4 lg:hidden">
+                {report.map((product) => (
+                  <div
+                    key={product.productId}
+                    className="rounded-xl border border-slate-200 bg-white p-4"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-900">
+                        {product.name}
+                      </p>
+
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {product.company}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <div className="rounded-lg bg-slate-50 p-3">
+                        <p className="text-xs text-slate-500">Orders</p>
+                        <p className="mt-1 font-semibold text-slate-900">
+                          {product.totalSales.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+
+                      <div className="rounded-lg bg-slate-50 p-3">
+                        <p className="text-xs text-slate-500">Units</p>
+                        <p className="mt-1 font-semibold text-slate-900">
+                          {product.totalUnits.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                      <p className="text-xs text-slate-500">Revenue</p>
+                      <p className="mt-1 font-semibold text-slate-900">
+                        ₹{product.totalRevenue.toLocaleString("en-IN")}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -486,64 +618,109 @@ const Reports = () => {
               No monthly sales found for the selected period.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px] text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50">
-                  <tr>
-                    <th className="px-6 py-4 font-medium text-slate-600">
-                      Month
-                    </th>
+            <>
+              <div className="hidden overflow-x-auto lg:block">
+                <table className="w-full min-w-[700px] text-left text-sm">
+                  <thead className="border-b border-slate-200 bg-slate-50">
+                    <tr>
+                      <th className="px-6 py-4 font-medium text-slate-600">
+                        Month
+                      </th>
 
-                    <th className="px-6 py-4 font-medium text-slate-600">
-                      Orders
-                    </th>
+                      <th className="px-6 py-4 font-medium text-slate-600">
+                        Orders
+                      </th>
 
-                    <th className="px-6 py-4 font-medium text-slate-600">
-                      Units
-                    </th>
+                      <th className="px-6 py-4 font-medium text-slate-600">
+                        Units
+                      </th>
 
-                    <th className="px-6 py-4 text-right font-medium text-slate-600">
-                      Revenue
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {report.map((month) => (
-                    <tr
-                      key={`${month.year}-${month.month}`}
-                      className="border-b border-slate-100 last:border-b-0"
-                    >
-                      <td className="px-6 py-4 font-medium text-slate-900">
-                        {new Date(
-                          month.year,
-                          month.month - 1,
-                          1
-                        ).toLocaleString("en-US", {
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </td>
-
-                      <td className="px-6 py-4 text-slate-700">
-                        {month.totalSales.toLocaleString("en-IN")}
-                      </td>
-
-                      <td className="px-6 py-4 text-slate-700">
-                        {month.totalUnits.toLocaleString("en-IN")}
-                      </td>
-
-                      <td className="px-6 py-4 text-right font-medium text-slate-900">
-                        ₹
-                        {month.totalRevenue.toLocaleString(
-                          "en-IN"
-                        )}
-                      </td>
+                      <th className="px-6 py-4 text-right font-medium text-slate-600">
+                        Revenue
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+
+                  <tbody>
+                    {report.map((month) => (
+                      <tr
+                        key={`${month.year}-${month.month}`}
+                        className="border-b border-slate-100 last:border-b-0"
+                      >
+                        <td className="px-6 py-4 font-medium text-slate-900">
+                          {new Date(
+                            month.year,
+                            month.month - 1,
+                            1
+                          ).toLocaleString("en-US", {
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </td>
+
+                        <td className="px-6 py-4 text-slate-700">
+                          {month.totalSales.toLocaleString("en-IN")}
+                        </td>
+
+                        <td className="px-6 py-4 text-slate-700">
+                          {month.totalUnits.toLocaleString("en-IN")}
+                        </td>
+
+                        <td className="px-6 py-4 text-right font-medium text-slate-900">
+                          ₹
+                          {month.totalRevenue.toLocaleString(
+                            "en-IN"
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="space-y-3 p-4 lg:hidden">
+                {report.map((month) => (
+                  <div
+                    key={`${month.year}-${month.month}`}
+                    className="rounded-xl border border-slate-200 bg-white p-4"
+                  >
+                    <p className="font-medium text-slate-900">
+                      {new Date(
+                        month.year,
+                        month.month - 1,
+                        1
+                      ).toLocaleString("en-US", {
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </p>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <div className="rounded-lg bg-slate-50 p-3">
+                        <p className="text-xs text-slate-500">Orders</p>
+                        <p className="mt-1 font-semibold text-slate-900">
+                          {month.totalSales.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+
+                      <div className="rounded-lg bg-slate-50 p-3">
+                        <p className="text-xs text-slate-500">Units</p>
+                        <p className="mt-1 font-semibold text-slate-900">
+                          {month.totalUnits.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                      <p className="text-xs text-slate-500">Revenue</p>
+                      <p className="mt-1 font-semibold text-slate-900">
+                        ₹{month.totalRevenue.toLocaleString("en-IN")}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}

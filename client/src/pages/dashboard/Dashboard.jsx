@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { NavLink } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -9,11 +10,15 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { getDashboardAnalytics } from "../../services/analyticsService";
+import { getAIInsights } from "../../services/aiService";
 
 const Dashboard = () => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [aiInsights, setAIInsights] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -32,6 +37,23 @@ const Dashboard = () => {
 
     fetchAnalytics();
   }, []);
+
+  const handleGenerateAIInsights = async () => {
+    setAiLoading(true);
+    setAiError("");
+
+    try {
+      const insights = await getAIInsights();
+      setAIInsights(insights);
+    } catch (error) {
+      setAiError(
+        error.response?.data?.message ||
+          "Unable to generate AI insights."
+      );
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const stats = [
     {
@@ -69,14 +91,24 @@ const Dashboard = () => {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">
-          Dashboard
-        </h1>
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">
+            Dashboard
+          </h1>
 
-        <p className="mt-2 text-slate-500">
-          Here's an overview of your sales performance.
-        </p>
+          <p className="mt-2 text-slate-500">
+            Here's an overview of your sales performance.
+          </p>
+        </div>
+
+        <NavLink
+          to="/sales/new"
+          className="inline-flex w-fit items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+        >
+          <span className="text-lg leading-none">+</span>
+          Record Sale
+        </NavLink>
       </div>
 
       {/* Error */}
@@ -279,6 +311,77 @@ const Dashboard = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* AI Business Insights Section */}
+      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">
+              AI Business Insights
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              AI-powered observations from your business data
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGenerateAIInsights}
+            disabled={aiLoading}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {aiLoading ? "Analyzing..." : "Generate Insights"}
+          </button>
+        </div>
+
+        {aiError && (
+          <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+            {aiError}
+          </div>
+        )}
+
+        {!aiLoading && aiInsights.length > 0 && (
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {aiInsights.map((insight, index) => (
+              <div
+                key={index}
+                className="rounded-lg border border-slate-100 bg-slate-50 p-4"
+              >
+                <div className="flex gap-3">
+                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm">
+                    ✦
+                  </div>
+
+                  <p className="text-sm leading-6 text-slate-700">
+                    {insight}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!aiLoading && aiInsights.length === 0 && !aiError && (
+          <div className="mt-5 rounded-lg border border-dashed border-slate-200 p-6 text-center">
+            <p className="text-sm text-slate-500">
+              Generate AI insights to discover meaningful patterns in your
+              business data.
+            </p>
+          </div>
+        )}
+
+        {aiLoading && (
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {[1, 2, 3, 4].map((item) => (
+              <div
+                key={item}
+                className="h-20 animate-pulse rounded-lg bg-slate-100"
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Full Width Recent Activity */}

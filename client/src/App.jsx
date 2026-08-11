@@ -17,7 +17,7 @@ import Sales from "./pages/sales/Sales";
 import SaleForm from "./pages/sales/SaleForm";
 import SaleDetails from "./pages/sales/SaleDetails";
 import Reports from "./pages/reports/Reports";
-
+import AI from "./pages/ai/AI";
 
 const App = () => {
   return (
@@ -42,6 +42,7 @@ const App = () => {
             <Route path="sales/new" element={<SaleForm />} />
             <Route path="sales/:id" element={<SaleDetails />} />
             <Route path="reports" element={<Reports />} />
+            <Route path="ai" element={<AI />} />
           </Route>
         </Route>
 

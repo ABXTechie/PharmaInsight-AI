@@ -104,85 +104,156 @@ const Sales = () => {
           </Link>
         </div>
       ) : (
-        /* Sales Table */
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-          <table className="min-w-full text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50">
-              <tr>
-                <th className="px-6 py-4 text-left font-medium text-slate-600">
-                  Customer
-                </th>
+        <>
+          {/* Sales Table (Desktop) */}
+          <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white lg:block">
+            <table className="min-w-full text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50">
+                <tr>
+                  <th className="px-6 py-4 text-left font-medium text-slate-600">
+                    Customer
+                  </th>
 
-                <th className="px-6 py-4 text-left font-medium text-slate-600">
-                  Items
-                </th>
+                  <th className="px-6 py-4 text-left font-medium text-slate-600">
+                    Items
+                  </th>
 
-                <th className="px-6 py-4 text-left font-medium text-slate-600">
-                  Amount
-                </th>
+                  <th className="px-6 py-4 text-left font-medium text-slate-600">
+                    Amount
+                  </th>
 
-                <th className="px-6 py-4 text-left font-medium text-slate-600">
-                  Date
-                </th>
+                  <th className="px-6 py-4 text-left font-medium text-slate-600">
+                    Date
+                  </th>
 
-                <th className="px-6 py-4 text-right font-medium text-slate-600">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-slate-100">
-              {sales.map((sale) => (
-                <tr
-                  key={sale._id}
-                  className="transition hover:bg-slate-50"
-                >
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="font-medium text-slate-900">
-                        {sale.customer?.name || "Unknown customer"}
-                      </p>
-
-                      <p className="text-xs text-slate-500">
-                        {sale.customer?.shopName || ""}
-                      </p>
-                    </div>
-                  </td>
-
-                  <td className="px-6 py-4 text-slate-600">
-                    {sale.items?.length || 0}
-                  </td>
-
-                  <td className="px-6 py-4 font-medium text-slate-900">
-                    ₹{sale.totalAmount?.toLocaleString("en-IN")}
-                  </td>
-
-                  <td className="px-6 py-4 text-slate-600">
-                    {new Date(sale.saleDate).toLocaleDateString("en-IN")}
-                  </td>
-
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-3">
-                      <Link
-                        to={`/sales/${sale._id}`}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                      >
-                        View
-                      </Link>
-
-                      <button
-                        onClick={() => handleDelete(sale._id)}
-                        className="text-sm font-medium text-red-600 hover:text-red-700"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
+                  <th className="px-6 py-4 text-right font-medium text-slate-600">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+
+              <tbody className="divide-y divide-slate-100">
+                {sales.map((sale) => (
+                  <tr
+                    key={sale._id}
+                    className="transition hover:bg-slate-50"
+                  >
+                    <td className="px-6 py-4">
+                      <div>
+                        <p className="font-medium text-slate-900">
+                          {sale.customer?.name || "Unknown customer"}
+                        </p>
+
+                        <p className="text-xs text-slate-500">
+                          {sale.customer?.shopName || ""}
+                        </p>
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4 text-slate-600">
+                      {sale.items?.length || 0}
+                    </td>
+
+                    <td className="px-6 py-4 font-medium text-slate-900">
+                      ₹{sale.totalAmount?.toLocaleString("en-IN")}
+                    </td>
+
+                    <td className="px-6 py-4 text-slate-600">
+                      {new Date(sale.saleDate).toLocaleDateString("en-IN")}
+                    </td>
+
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-3">
+                        <Link
+                          to={`/sales/${sale._id}`}
+                          className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                        >
+                          View
+                        </Link>
+
+                        <button
+                          onClick={() => handleDelete(sale._id)}
+                          className="text-sm font-medium text-red-600 hover:text-red-700"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Sales Cards (Mobile & Tablet) */}
+          <div className="space-y-3 lg:hidden">
+            {sales.map((sale) => (
+              <div
+                key={sale._id}
+                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+              >
+                {/* Customer */}
+                <div>
+                  <p className="font-medium text-slate-900">
+                    {sale.customer?.name || "Unknown customer"}
+                  </p>
+
+                  {sale.customer?.shopName && (
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {sale.customer.shopName}
+                    </p>
+                  )}
+                </div>
+
+                {/* Sale Details */}
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">Items</p>
+
+                    <p className="mt-1 font-semibold text-slate-900">
+                      {sale.items?.length || 0}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">Amount</p>
+
+                    <p className="mt-1 font-semibold text-slate-900">
+                      ₹{sale.totalAmount?.toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Date */}
+                <div className="mt-3">
+                  <p className="text-xs text-slate-500">Sale Date</p>
+
+                  <p className="mt-1 text-sm text-slate-700">
+                    {new Date(sale.saleDate).toLocaleDateString("en-IN")}
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="mt-4 flex items-center justify-end gap-4 border-t border-slate-100 pt-3">
+                  <Link
+                    to={`/sales/${sale._id}`}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                  >
+                    View
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(sale._id)}
+                    className="text-sm font-medium text-red-600 hover:text-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
