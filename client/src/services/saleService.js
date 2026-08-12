@@ -1,0 +1,26 @@
+import api from "./api";
+
+export const getSales = async () => {
+  const response = await api.get("/sales");
+  return response.data;
+};
+
+export const getSale = async (id) => {
+  const response = await api.get(`/sales/${id}`);
+  return response.data;
+};
+
+export const createSale = async (saleData) => {
+  const response = await api.post("/sales", saleData);
+  return response.data;
+};
+
+export const deleteSale = async (id) => {
+  const response = await api.delete(`/sales/${id}`);
+  return response.data;
+};
+
+export const getCustomerSales = async (customerId) => {
+  const response = await api.get(`/sales/customer/${customerId}`);
+  return response.data;
+};

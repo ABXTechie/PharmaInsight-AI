@@ -10,6 +10,14 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import Customers from "./pages/customers/Customers";
+import CustomerDetails from "./pages/customers/CustomerDetails";
+import Products from "./pages/products/Products";
+import Sales from "./pages/sales/Sales";
+import SaleForm from "./pages/sales/SaleForm";
+import SaleDetails from "./pages/sales/SaleDetails";
+import Reports from "./pages/reports/Reports";
+import AI from "./pages/ai/AI";
 
 const App = () => {
   return (
@@ -27,6 +35,14 @@ const App = () => {
               path="/dashboard"
               element={<Dashboard />}
             />
+            <Route path="customers" element={<Customers />} />
+            <Route path="customers/:id" element={<CustomerDetails />} />
+            <Route path="products" element={<Products />} />
+            <Route path="sales" element={<Sales />} />
+            <Route path="sales/new" element={<SaleForm />} />
+            <Route path="sales/:id" element={<SaleDetails />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="ai" element={<AI />} />
           </Route>
         </Route>
 
