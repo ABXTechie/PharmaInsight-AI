@@ -27,6 +27,13 @@ const SaleForm = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  // Search UI state
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [productSearch, setProductSearch] = useState({});
+
+  // Currently open dropdown
+  const [openDropdown, setOpenDropdown] = useState(null);
+
   useEffect(() => {
     const loadFormData = async () => {
       try {
@@ -53,6 +60,10 @@ const SaleForm = () => {
     loadFormData();
   }, []);
 
+  // --------------------------------
+  // Items
+  // --------------------------------
+
   const addItem = () => {
     setItems((currentItems) => [
       ...currentItems,
@@ -68,6 +79,14 @@ const SaleForm = () => {
     setItems((currentItems) =>
       currentItems.filter((_, itemIndex) => itemIndex !== index)
     );
+
+    setProductSearch((currentSearch) => {
+      const updatedSearch = { ...currentSearch };
+      delete updatedSearch[index];
+      return updatedSearch;
+    });
+
+    setOpenDropdown(null);
   };
 
   const updateItem = (index, field, value) => {
@@ -83,12 +102,115 @@ const SaleForm = () => {
     );
   };
 
+  // --------------------------------
+  // Customer Search
+  // --------------------------------
+
+  const filteredCustomers =
+    customerSearch.trim().length >= 1
+      ? customers.filter((customerItem) => {
+          const search = customerSearch.trim().toLowerCase();
+
+          const name = customerItem.name?.toLowerCase() || "";
+          const shopName = customerItem.shopName?.toLowerCase() || "";
+
+          return (
+            name.includes(search) ||
+            shopName.includes(search)
+          );
+        })
+      : [];
+
+  const handleCustomerSearch = (value) => {
+    setCustomerSearch(value);
+
+    // User is typing again, so previous selection is no longer valid.
+    setCustomer("");
+
+    setOpenDropdown("customer");
+  };
+
+  const handleCustomerSelect = (customerItem) => {
+    setCustomer(customerItem._id);
+
+    setCustomerSearch(
+      `${customerItem.name}${
+        customerItem.shopName
+          ? ` — ${customerItem.shopName}`
+          : ""
+      }`
+    );
+
+    setOpenDropdown(null);
+  };
+
+  // --------------------------------
+  // Product Search
+  // --------------------------------
+
+  const getFilteredProducts = (index) => {
+    const search = (productSearch[index] || "")
+      .trim()
+      .toLowerCase();
+
+    if (!search) {
+      return [];
+    }
+
+    return products.filter((product) => {
+      const name = product.name?.toLowerCase() || "";
+      const company = product.company?.toLowerCase() || "";
+
+      return (
+        name.includes(search) ||
+        company.includes(search)
+      );
+    });
+  };
+
+  const handleProductSearch = (index, value) => {
+    setProductSearch((currentSearch) => ({
+      ...currentSearch,
+      [index]: value,
+    }));
+
+    // User is typing again, so previous product selection
+    // is no longer considered valid.
+    updateItem(index, "product", "");
+
+    setOpenDropdown(`product-${index}`);
+  };
+
+  const handleProductSelect = (index, product) => {
+    updateItem(index, "product", product._id);
+
+    setProductSearch((currentSearch) => ({
+      ...currentSearch,
+      [index]: `${product.name}${
+        product.company
+          ? ` — ${product.company}`
+          : ""
+      }`,
+    }));
+
+    setOpenDropdown(null);
+  };
+
+  // --------------------------------
+  // Total
+  // --------------------------------
+
   const totalAmount = items.reduce((total, item) => {
     const subtotal =
-      Number(item.quantity || 0) * Number(item.unitPrice || 0);
+      Number(item.quantity || 0) *
+      Number(item.unitPrice || 0);
 
     return total + subtotal;
   }, 0);
+
+  // --------------------------------
+  // Submit
+  // --------------------------------
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -132,7 +254,8 @@ const SaleForm = () => {
       navigate("/sales");
     } catch (error) {
       setError(
-        error.response?.data?.message || "Failed to create sale"
+        error.response?.data?.message ||
+          "Failed to create sale"
       );
     } finally {
       setSaving(false);
@@ -140,12 +263,16 @@ const SaleForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-4xl space-y-6 p-6">
+    <form
+      onSubmit={handleSubmit}
+      className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6"
+    >
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">
           Record Sale
         </h1>
+
         <p className="mt-1 text-sm text-slate-500">
           Create a new sales transaction.
         </p>
@@ -168,7 +295,7 @@ const SaleForm = () => {
           )}
 
           {/* Sale Information */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
             <h2 className="text-base font-semibold text-slate-900">
               Sale Information
             </h2>
@@ -183,26 +310,97 @@ const SaleForm = () => {
                   Customer
                 </label>
 
-                <select
-                  id="customer"
-                  value={customer}
-                  onChange={(e) => setCustomer(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                >
-                  <option value="">Select customer</option>
+                <div className="relative">
+                  <input
+                    id="customer"
+                    type="text"
+                    value={customerSearch}
+                    onChange={(e) =>
+                      handleCustomerSearch(e.target.value)
+                    }
+                    onFocus={() =>
+                      setOpenDropdown("customer")
+                    }
+                    onBlur={() => {
+                      setTimeout(() => {
+                        setOpenDropdown((current) =>
+                          current === "customer"
+                            ? null
+                            : current
+                        );
+                      }, 150);
+                    }}
+                    placeholder="Search customer..."
+                    autoComplete="off"
+                    className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 pr-10 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
 
-                  {customers.map((customerItem) => (
-                    <option
-                      key={customerItem._id}
-                      value={customerItem._id}
+                  {/* Search Icon */}
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="h-4 w-4 text-slate-400"
                     >
-                      {customerItem.name}
-                      {customerItem.shopName
-                        ? ` — ${customerItem.shopName}`
-                        : ""}
-                    </option>
-                  ))}
-                </select>
+                      <circle cx="11" cy="11" r="7" />
+                      <path d="m20 20-3.5-3.5" />
+                    </svg>
+                  </div>
+
+                  {/* Customer Results */}
+                  {openDropdown === "customer" &&
+                    customerSearch.trim().length >= 1 && (
+                      <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                        {filteredCustomers.length > 0 ? (
+                          filteredCustomers.map(
+                            (customerItem) => (
+                              <button
+                                key={customerItem._id}
+                                type="button"
+                                onMouseDown={(e) =>
+                                  e.preventDefault()
+                                }
+                                onClick={() =>
+                                  handleCustomerSelect(
+                                    customerItem
+                                  )
+                                }
+                                className={`block min-h-[52px] w-full px-3 py-2.5 text-left text-sm transition hover:bg-slate-50 active:bg-slate-100 ${
+                                  customer ===
+                                  customerItem._id
+                                    ? "bg-blue-50 text-blue-700"
+                                    : "text-slate-700"
+                                }`}
+                              >
+                                <div className="font-medium">
+                                  {customerItem.name}
+                                </div>
+
+                                {customerItem.shopName && (
+                                  <div className="mt-0.5 text-xs text-slate-400">
+                                    {customerItem.shopName}
+                                  </div>
+                                )}
+                              </button>
+                            )
+                          )
+                        ) : (
+                          <div className="px-3 py-4 text-sm text-slate-500">
+                            No customers found
+                          </div>
+                        )}
+                      </div>
+                    )}
+                </div>
+
+                {!customerSearch && (
+                  <p className="mt-1.5 text-xs text-slate-400">
+                    Type to search customers
+                  </p>
+                )}
               </div>
 
               {/* Sale Date */}
@@ -218,16 +416,18 @@ const SaleForm = () => {
                   id="saleDate"
                   type="date"
                   value={saleDate}
-                  onChange={(e) => setSaleDate(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  onChange={(e) =>
+                    setSaleDate(e.target.value)
+                  }
+                  className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
             </div>
           </div>
 
           {/* Sale Items */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6">
-            <div className="flex items-center justify-between">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-base font-semibold text-slate-900">
                   Products
@@ -241,7 +441,7 @@ const SaleForm = () => {
               <button
                 type="button"
                 onClick={addItem}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 active:bg-slate-100 sm:w-auto"
               >
                 + Add Product
               </button>
@@ -250,12 +450,16 @@ const SaleForm = () => {
             <div className="mt-5 space-y-4">
               {items.map((item, index) => {
                 const subtotal =
-                  Number(item.quantity || 0) * Number(item.unitPrice || 0);
+                  Number(item.quantity || 0) *
+                  Number(item.unitPrice || 0);
+
+                const filteredProducts =
+                  getFilteredProducts(index);
 
                 return (
                   <div
                     key={index}
-                    className="rounded-lg border border-slate-200 p-4"
+                    className="rounded-lg border border-slate-200 p-3 sm:p-4"
                   >
                     <div className="grid gap-4 md:grid-cols-12">
                       {/* Product */}
@@ -264,24 +468,115 @@ const SaleForm = () => {
                           Product
                         </label>
 
-                        <select
-                          value={item.product}
-                          onChange={(e) =>
-                            updateItem(index, "product", e.target.value)
-                          }
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                        >
-                          <option value="">Select product</option>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={
+                              productSearch[index] || ""
+                            }
+                            onChange={(e) =>
+                              handleProductSearch(
+                                index,
+                                e.target.value
+                              )
+                            }
+                            onFocus={() =>
+                              setOpenDropdown(
+                                `product-${index}`
+                              )
+                            }
+                            onBlur={() => {
+                              setTimeout(() => {
+                                setOpenDropdown(
+                                  (current) =>
+                                    current ===
+                                    `product-${index}`
+                                      ? null
+                                      : current
+                                );
+                              }, 150);
+                            }}
+                            placeholder="Search product..."
+                            autoComplete="off"
+                            className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 pr-10 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          />
 
-                          {products.map((product) => (
-                            <option key={product._id} value={product._id}>
-                              {product.name}
-                              {product.company
-                                ? ` — ${product.company}`
-                                : ""}
-                            </option>
-                          ))}
-                        </select>
+                          {/* Search Icon */}
+                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              className="h-4 w-4 text-slate-400"
+                            >
+                              <circle
+                                cx="11"
+                                cy="11"
+                                r="7"
+                              />
+                              <path d="m20 20-3.5-3.5" />
+                            </svg>
+                          </div>
+
+                          {/* Product Results */}
+                          {openDropdown ===
+                            `product-${index}` &&
+                            productSearch[index]?.trim()
+                              .length >= 1 && (
+                              <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                                {filteredProducts.length >
+                                0 ? (
+                                  filteredProducts.map(
+                                    (product) => (
+                                      <button
+                                        key={product._id}
+                                        type="button"
+                                        onMouseDown={(e) =>
+                                          e.preventDefault()
+                                        }
+                                        onClick={() =>
+                                          handleProductSelect(
+                                            index,
+                                            product
+                                          )
+                                        }
+                                        className={`block min-h-[56px] w-full px-3 py-2.5 text-left text-sm transition hover:bg-slate-50 active:bg-slate-100 ${
+                                          item.product ===
+                                          product._id
+                                            ? "bg-blue-50 text-blue-700"
+                                            : "text-slate-700"
+                                        }`}
+                                      >
+                                        <div className="font-medium">
+                                          {product.name}
+                                        </div>
+
+                                        {product.company && (
+                                          <div className="mt-0.5 text-xs text-slate-400">
+                                            {
+                                              product.company
+                                            }
+                                          </div>
+                                        )}
+                                      </button>
+                                    )
+                                  )
+                                ) : (
+                                  <div className="px-3 py-4 text-sm text-slate-500">
+                                    No products found
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                        </div>
+
+                        {!productSearch[index] && (
+                          <p className="mt-1.5 text-xs text-slate-400">
+                            Type to search products
+                          </p>
+                        )}
                       </div>
 
                       {/* Quantity */}
@@ -295,9 +590,13 @@ const SaleForm = () => {
                           min="1"
                           value={item.quantity}
                           onChange={(e) =>
-                            updateItem(index, "quantity", e.target.value)
+                            updateItem(
+                              index,
+                              "quantity",
+                              e.target.value
+                            )
                           }
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         />
                       </div>
 
@@ -313,10 +612,14 @@ const SaleForm = () => {
                           step="0.01"
                           value={item.unitPrice}
                           onChange={(e) =>
-                            updateItem(index, "unitPrice", e.target.value)
+                            updateItem(
+                              index,
+                              "unitPrice",
+                              e.target.value
+                            )
                           }
                           placeholder="₹0"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         />
                       </div>
 
@@ -326,8 +629,11 @@ const SaleForm = () => {
                           Subtotal
                         </label>
 
-                        <div className="flex h-[42px] items-center rounded-lg bg-slate-50 px-3 text-sm font-medium text-slate-900">
-                          ₹{subtotal.toLocaleString("en-IN")}
+                        <div className="flex h-11 items-center rounded-lg bg-slate-50 px-3 text-sm font-medium text-slate-900">
+                          ₹
+                          {subtotal.toLocaleString(
+                            "en-IN"
+                          )}
                         </div>
                       </div>
 
@@ -335,9 +641,11 @@ const SaleForm = () => {
                       <div className="flex items-end justify-end md:col-span-1">
                         <button
                           type="button"
-                          onClick={() => removeItem(index)}
+                          onClick={() =>
+                            removeItem(index)
+                          }
                           disabled={items.length === 1}
-                          className="rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                          className="w-full rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 active:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40 md:w-auto"
                         >
                           Remove
                         </button>
@@ -350,9 +658,12 @@ const SaleForm = () => {
           </div>
 
           {/* Sale Total */}
-          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-6">
+          <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>
-              <p className="text-sm text-slate-500">Total Amount</p>
+              <p className="text-sm text-slate-500">
+                Total Amount
+              </p>
+
               <p className="mt-1 text-xs text-slate-400">
                 Calculated from all sale items
               </p>
@@ -364,11 +675,11 @@ const SaleForm = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={() => navigate("/sales")}
-              className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="w-full rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 active:bg-slate-100 sm:w-auto"
             >
               Cancel
             </button>
@@ -376,7 +687,7 @@ const SaleForm = () => {
             <button
               type="submit"
               disabled={saving || loading}
-              className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 active:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {saving ? "Recording..." : "Record Sale"}
             </button>
