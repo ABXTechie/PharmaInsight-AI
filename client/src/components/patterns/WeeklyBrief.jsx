@@ -4,6 +4,7 @@ import Icon from "../ui/Icon";
 import { Alert, Skeleton } from "../ui/Primitives";
 import { getWeeklyBrief } from "../../services/aiService";
 import { useAuth } from "../../context/AuthContext";
+import { friendlyApiError } from "../../utils/apiError";
 
 const ACTION_META = {
   call: { label: "Call", icon: "users", chip: "bg-red-50 text-red-700 ring-red-100" },
@@ -44,10 +45,7 @@ const WeeklyBrief = () => {
       setBrief(data);
       sessionStorage.setItem(key, JSON.stringify(data));
     } catch (err) {
-      setError(err.response?.data?.message ||
-          (err.code === "ECONNABORTED"
-            ? "The AI took too long to respond. Please try again."
-            : "Unable to generate the weekly brief."));
+      setError(friendlyApiError(err, "Unable to generate the weekly brief."));
     } finally {
       setLoading(false);
     }

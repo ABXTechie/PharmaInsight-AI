@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getPatternInsights } from "../services/analyticsService";
+import { friendlyApiError } from "../utils/apiError";
 
 /**
  * Loads the pattern signals (shared, briefly cached across pages).
@@ -16,7 +17,7 @@ const usePatterns = () => {
       setPatterns(data);
       setError("");
     } catch (err) {
-      setError(err.response?.data?.message || "Unable to load buying patterns.");
+      setError(friendlyApiError(err, "Unable to load buying patterns."));
     } finally {
       setLoading(false);
     }
@@ -31,7 +32,7 @@ const usePatterns = () => {
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err.response?.data?.message || "Unable to load buying patterns.");
+          setError(friendlyApiError(err, "Unable to load buying patterns."));
         }
       })
       .finally(() => {

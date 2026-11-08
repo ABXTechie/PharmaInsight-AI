@@ -157,13 +157,17 @@ const Products = () => {
                     Category
                   </th>
 
-                  <th className="th text-left">
-                    30-day trend
-                  </th>
+                  {patterns && (
+                    <>
+                      <th className="th text-left">
+                        30-day trend
+                      </th>
 
-                  <th className="th text-left">
-                    Customers
-                  </th>
+                      <th className="th text-left">
+                        Customers
+                      </th>
+                    </>
+                  )}
 
                   <th className="th text-left">
                     Description
@@ -197,6 +201,8 @@ const Products = () => {
                       </span>
                     </td>
 
+                    {patterns && (
+                    <>
                     <td className="px-6 py-4">
                       <TrendBadge trend={patternById.get(product._id)?.trend} />
                     </td>
@@ -212,6 +218,8 @@ const Products = () => {
                         </div>
                       )}
                     </td>
+                    </>
+                    )}
 
                     <td className="max-w-xs px-6 py-4 text-slate-500">
                       <p className="line-clamp-2">{product.description || "—"}</p>

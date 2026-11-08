@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Icon from "../ui/Icon";
 import { Alert, Skeleton } from "../ui/Primitives";
 import { getTalkingPoints } from "../../services/aiService";
+import { friendlyApiError } from "../../utils/apiError";
 
 /**
  * AI talking points for a call or visit with one customer, based on their
@@ -20,10 +21,7 @@ const TalkingPoints = ({ customerId, shopName }) => {
     try {
       setData(await getTalkingPoints(customerId));
     } catch (err) {
-      setError(err.response?.data?.message ||
-          (err.code === "ECONNABORTED"
-            ? "The AI took too long to respond. Please try again."
-            : "Unable to generate talking points."));
+      setError(friendlyApiError(err, "Unable to generate talking points."));
     } finally {
       setLoading(false);
     }

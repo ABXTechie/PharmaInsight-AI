@@ -215,9 +215,11 @@ const Customers = () => {
                     Shop
                   </th>
 
-                  <th className="th text-left">
-                    Buying status
-                  </th>
+                  {patterns && (
+                    <th className="th text-left">
+                      Buying status
+                    </th>
+                  )}
 
                   <th className="th text-left">
                     This Month
@@ -255,12 +257,14 @@ const Customers = () => {
                       {customer.shopName}
                     </td>
 
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col items-start gap-1">
-                        <StatusBadge status={patternById.get(customer._id)?.status} />
-                        <span className="text-xs text-slate-400">{lastOrderText(customer._id)}</span>
-                      </div>
-                    </td>
+                    {patterns && (
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col items-start gap-1">
+                          <StatusBadge status={patternById.get(customer._id)?.status} />
+                          <span className="text-xs text-slate-400">{lastOrderText(customer._id)}</span>
+                        </div>
+                      </td>
+                    )}
 
                     <td className="px-6 py-4 font-medium text-slate-900">
                       ₹{Number(customer.thisMonthSales || 0).toLocaleString("en-IN")}

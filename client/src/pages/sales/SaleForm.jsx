@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, PageHeader, Skeleton } from "../../components/ui/Primitives";
+import { friendlyApiError } from "../../utils/apiError";
 import { useNavigate, useParams } from "react-router-dom";
 import { getCustomers } from "../../services/customerService";
 import { getProducts } from "../../services/productService";
@@ -324,8 +325,7 @@ const SaleForm = () => {
       }
     } catch (error) {
       setError(
-        error.response?.data?.message ||
-          (isEditing ? "Failed to update sale" : "Failed to create sale")
+        friendlyApiError(error, isEditing ? "Failed to update sale" : "Failed to create sale")
       );
     } finally {
       setSaving(false);
