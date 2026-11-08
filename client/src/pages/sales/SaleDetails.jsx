@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import Icon from "../../components/ui/Icon";
 import { getSale } from "../../services/saleService";
+import { Alert, PageHeader, Skeleton } from "../../components/ui/Primitives";
 
 const SaleDetails = () => {
   const { id } = useParams();
@@ -31,27 +33,20 @@ const SaleDetails = () => {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <p className="text-sm text-slate-500">
-          Loading sale...
-        </p>
+      <div className="mx-auto max-w-4xl space-y-6" role="status" aria-label="Loading sale">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-8 w-56" />
+        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-64 rounded-xl" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="space-y-4 p-6">
-        <Link
-          to="/sales"
-          className="text-sm font-medium text-blue-600 hover:text-blue-700"
-        >
-          ← Back to Sales
-        </Link>
-
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-          {error}
-        </div>
+      <div>
+        <PageHeader backTo="/sales" backLabel="Back to Sales" title="Sale Details" />
+        <Alert>{error}</Alert>
       </div>
     );
   }
@@ -61,34 +56,29 @@ const SaleDetails = () => {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       {/* Header */}
-      <div>
-        <Link
-          to="/sales"
-          className="text-sm font-medium text-blue-600 hover:text-blue-700"
-        >
-          ← Back to Sales
-        </Link>
-
-        <div className="mt-4">
-          <h1 className="text-2xl font-semibold text-slate-900">
-            Sale Details
-          </h1>
-
-          <p className="mt-1 text-sm text-slate-500">
-            {new Date(sale.saleDate).toLocaleDateString("en-IN", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        backTo="/sales"
+        backLabel="Back to Sales"
+        eyebrow="Sale"
+        title="Sale Details"
+        actions={
+          <Link to={`/sales/${sale._id}/edit`} className="btn-secondary">
+            <Icon name="edit" className="h-4 w-4" />
+            Edit Sale
+          </Link>
+        }
+        description={new Date(sale.saleDate).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })}
+      />
 
       {/* Customer */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6">
-        <h2 className="text-base font-semibold text-slate-900">
+      <div className="card p-6">
+        <h2 className="eyebrow">
           Customer
         </h2>
 
@@ -110,7 +100,7 @@ const SaleDetails = () => {
       </div>
 
       {/* Products */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <div className="overflow-x-auto card">
         <div className="p-6">
           <h2 className="text-base font-semibold text-slate-900">
             Products
@@ -118,21 +108,21 @@ const SaleDetails = () => {
         </div>
 
         <table className="min-w-full text-sm">
-          <thead className="border-y border-slate-200 bg-slate-50">
+          <thead className="border-y border-slate-200 bg-slate-50/70">
             <tr>
-              <th className="px-6 py-3 text-left font-medium text-slate-600">
+              <th className="th text-left">
                 Product
               </th>
 
-              <th className="px-6 py-3 text-right font-medium text-slate-600">
+              <th className="th text-right">
                 Quantity
               </th>
 
-              <th className="px-6 py-3 text-right font-medium text-slate-600">
+              <th className="th text-right">
                 Unit Price
               </th>
 
-              <th className="px-6 py-3 text-right font-medium text-slate-600">
+              <th className="th text-right">
                 Subtotal
               </th>
             </tr>
@@ -168,13 +158,13 @@ const SaleDetails = () => {
         </table>
 
         {/* Total */}
-        <div className="flex justify-end border-t border-slate-200 p-6">
+        <div className="flex justify-end border-t border-slate-200 bg-slate-50/60 p-6">
           <div className="text-right">
             <p className="text-sm text-slate-500">
               Total Amount
             </p>
 
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
+            <p className="tabular mt-1 text-2xl font-semibold tracking-tight text-blue-700">
               ₹{sale.totalAmount?.toLocaleString("en-IN")}
             </p>
           </div>

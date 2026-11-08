@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import AuthLayout from "../../components/layout/AuthLayout";
+import { Alert } from "../../components/ui/Primitives";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -44,35 +46,25 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm border border-slate-200">
+    <AuthLayout
+      title="Welcome back"
+      subtitle="Sign in to PharmaInsight AI"
+      footer={
+        <>
+          Don't have an account?{" "}
+          <Link to="/register" className="font-medium text-blue-600 hover:text-blue-700">
+            Create one
+          </Link>
+        </>
+      }
+    >
+      {error && <Alert className="mb-5">{error}</Alert>}
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">
-            Welcome back
-          </h1>
-
-          <p className="mt-2 text-slate-500">
-            Sign in to PharmaInsight AI
-          </p>
-        </div>
-
-        {error && (
-          <div className="mb-5 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-
+      <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label
-              htmlFor="email"
-              className="mb-2 block text-sm font-medium text-slate-700"
-            >
+            <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700">
               Email
             </label>
-
             <input
               id="email"
               name="email"
@@ -80,19 +72,15 @@ const Login = () => {
               value={formData.email}
               onChange={handleChange}
               placeholder="you@example.com"
+              autoComplete="email"
               required
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="input h-11"
             />
           </div>
-
           <div>
-            <label
-              htmlFor="password"
-              className="mb-2 block text-sm font-medium text-slate-700"
-            >
+            <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-700">
               Password
             </label>
-
             <input
               id="password"
               name="password"
@@ -100,33 +88,17 @@ const Login = () => {
               value={formData.password}
               onChange={handleChange}
               placeholder="Enter your password"
+              autoComplete="current-password"
               required
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="input h-11"
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
-
-        </form>
-
-        <p className="mt-6 text-center text-sm text-slate-500">
-          Don't have an account?{" "}
-          <Link
-            to="/register"
-            className="font-medium text-blue-600 hover:text-blue-700"
-          >
-            Create one
-          </Link>
-        </p>
-
-      </div>
-    </div>
+        <button type="submit" disabled={loading} className="btn-primary h-11 w-full">
+          {loading ? "Signing in..." : "Sign in"}
+        </button>
+      </form>
+    </AuthLayout>
   );
 };
 

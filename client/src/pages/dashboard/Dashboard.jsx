@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, NavLink } from "react-router-dom";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -11,14 +11,112 @@ import {
 } from "recharts";
 import { getDashboardAnalytics } from "../../services/analyticsService";
 import { getAIInsights } from "../../services/aiService";
+import { useAuth } from "../../context/AuthContext";
+import Icon from "../../components/ui/Icon";
+import usePatterns from "../../hooks/usePatterns";
+import AttentionList from "../../components/patterns/AttentionList";
+import WeeklyBrief from "../../components/patterns/WeeklyBrief";
+import { StatusBadge } from "../../components/patterns/PatternBadges";
+import { STATUS_ORDER } from "../../components/patterns/patternMeta";
+import {
+  Alert,
+  EmptyState,
+  KpiCard,
+  Section,
+  Skeleton,
+} from "../../components/ui/Primitives";
+import {
+  formatDate,
+  formatINR,
+  formatINRCompact,
+  formatNumber,
+  initials,
+} from "../../utils/format";
+
+const greeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+};
+
+const RevenueTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-pop">
+      <p className="text-xs font-medium text-slate-500">{label}</p>
+      <p className="tabular mt-0.5 text-sm font-semibold text-slate-900">
+        {formatINR(payload[0].value)}
+      </p>
+    </div>
+  );
+};
+
+const RankedList = ({ items, loading, emptyTitle, emptyIcon, getKey, getTitle, getSubtitle, getValue, getMeta, valueOf }) => {
+  if (loading) {
+    return (
+      <div className="space-y-5 p-5 sm:p-6">
+        {[0, 1, 2, 3].map((key) => (
+          <div key={key} className="space-y-2">
+            <div className="flex justify-between">
+              <Skeleton className="h-3.5 w-40" />
+              <Skeleton className="h-3.5 w-16" />
+            </div>
+            <Skeleton className="h-1.5 w-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!items?.length) {
+    return <EmptyState compact icon={emptyIcon} title={emptyTitle} />;
+  }
+
+  const max = Math.max(...items.map(valueOf), 1);
+
+  return (
+    <ol className="divide-y divide-slate-100">
+      {items.map((item, index) => (
+        <li key={getKey(item)} className="px-5 py-3.5 sm:px-6">
+          <div className="flex items-center gap-3">
+            <span className="tabular w-5 shrink-0 text-xs font-semibold text-slate-400">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="truncate text-sm font-medium text-slate-900">{getTitle(item)}</p>
+                <p className="tabular shrink-0 text-sm font-semibold text-slate-900">{getValue(item)}</p>
+              </div>
+              <div className="mt-0.5 flex items-baseline justify-between gap-3">
+                <p className="truncate text-xs text-slate-500">{getSubtitle(item)}</p>
+                <p className="shrink-0 text-xs text-slate-400">{getMeta(item)}</p>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+                <div
+                  className="h-full rounded-full bg-blue-500/80 transition-[width] duration-700 ease-out"
+                  style={{ width: `${Math.max((valueOf(item) / max) * 100, 2)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+};
 
 const Dashboard = () => {
+  const { user } = useAuth();
+  const { patterns, loading: patternsLoading, error: patternsError } = usePatterns();
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [aiInsights, setAIInsights] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [aiGeneratedAt, setAiGeneratedAt] = useState(null);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -45,6 +143,7 @@ const Dashboard = () => {
     try {
       const insights = await getAIInsights();
       setAIInsights(insights);
+      setAiGeneratedAt(new Date());
     } catch (error) {
       setAiError(
         error.response?.data?.message ||
@@ -58,383 +157,453 @@ const Dashboard = () => {
   const stats = [
     {
       label: "Revenue Today",
-      value: `₹${analytics?.revenueToday?.toLocaleString("en-IN") || "0"}`,
+      value: formatINR(analytics?.revenueToday),
+      icon: "rupee",
+      accent: "brand",
     },
     {
       label: "Revenue This Month",
-      value: `₹${
-        analytics?.revenueThisMonth?.toLocaleString("en-IN") || "0"
-      }`,
-    },
-    {
-      label: "Total Sales",
-      value: analytics?.totalSales?.toLocaleString("en-IN") || "0",
-    },
-    {
-      label: "Customers",
-      value: analytics?.customerCount?.toLocaleString("en-IN") || "0",
-    },
-    {
-      label: "Products",
-      value: analytics?.productCount?.toLocaleString("en-IN") || "0",
+      value: formatINR(analytics?.revenueThisMonth),
+      icon: "calendar",
+      accent: "brand",
     },
     {
       label: "Average Order Value",
-      value: `₹${
-        analytics?.averageOrderValue?.toLocaleString("en-IN", {
-          maximumFractionDigits: 2,
-        }) || "0"
-      }`,
+      value: formatINR(analytics?.averageOrderValue),
+      icon: "trend",
+      accent: "brand",
+    },
+    {
+      label: "Total Sales",
+      value: formatNumber(analytics?.totalSales),
+      icon: "cart",
+      hint: "All recorded orders",
+    },
+    {
+      label: "Customers",
+      value: formatNumber(analytics?.customerCount),
+      icon: "store",
+      hint: "Active accounts",
+    },
+    {
+      label: "Products",
+      value: formatNumber(analytics?.productCount),
+      icon: "pill",
+      hint: "In catalog",
     },
   ];
 
-  return (
-    <div>
-      {/* Header */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">
-            Dashboard
-          </h1>
+  // Derived only from the 12 months the API returns — no estimation.
+  const revenueSummary = useMemo(() => {
+    const months = analytics?.monthlyRevenue || [];
+    if (!months.length) return null;
 
-          <p className="mt-2 text-slate-500">
-            Here's an overview of your sales performance.
+    const total = months.reduce((sum, m) => sum + Number(m.revenue || 0), 0);
+    const peak = months.reduce((best, m) => (m.revenue > best.revenue ? m : best), months[0]);
+
+    return { total, peak };
+  }, [analytics]);
+
+  const hasRevenue = analytics?.monthlyRevenue?.some((m) => m.revenue > 0);
+  const firstName = user?.name?.split(" ")[0];
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <header className="flex animate-fade-in flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="eyebrow mb-2">
+            {new Date().toLocaleDateString("en-IN", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-[28px] sm:leading-9">
+            {greeting()}
+            {firstName ? `, ${firstName}` : ""}.
+          </h1>
+          <p className="mt-1.5 text-sm text-slate-500">
+            Your pharmaceutical business intelligence, all in one place.
           </p>
         </div>
 
-        <NavLink
-          to="/sales/new"
-          className="inline-flex w-fit items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
-        >
-          <span className="text-lg leading-none">+</span>
-          Record Sale
-        </NavLink>
-      </div>
-
-      {/* Error */}
-      {error && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-          {error}
+        <div className="flex gap-2">
+          <NavLink to="/ai" className="btn-secondary">
+            <Icon name="sparkles" className="h-4 w-4 text-mint-600" />
+            Ask AI
+          </NavLink>
+          <NavLink to="/sales/new" className="btn-primary sm:hidden">
+            <Icon name="plus" className="h-4 w-4" />
+            Record Sale
+          </NavLink>
         </div>
-      )}
+      </header>
+
+      {error && <Alert>{error}</Alert>}
 
       {/* KPI Cards */}
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <section aria-label="Key metrics" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-6">
         {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
-          >
-            <p className="text-sm font-medium text-slate-500">
-              {stat.label}
-            </p>
-
-            <p className="mt-3 text-3xl font-bold text-slate-900">
-              {loading ? "..." : stat.value}
-            </p>
-          </div>
+          <KpiCard key={stat.label} loading={loading} {...stat} />
         ))}
-      </div>
+      </section>
 
-      {/* Full Width Monthly Revenue Chart */}
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-6">
-          <h2 className="font-semibold text-slate-900">
-            Monthly Revenue
-          </h2>
+      {/* AI weekly brief (on demand) */}
+      <WeeklyBrief />
 
-          <p className="mt-1 text-sm text-slate-500">
-            Revenue performance over the last 12 months.
-          </p>
-        </div>
-
-        {loading ? (
-          <div className="flex h-72 items-center justify-center text-sm text-slate-500">
-            Loading revenue data...
-          </div>
-        ) : analytics?.monthlyRevenue?.length ? (
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={analytics.monthlyRevenue}
-                margin={{
-                  top: 5,
-                  right: 10,
-                  left: 0,
-                  bottom: 5,
-                }}
+      {/* Needs attention — pattern signals */}
+      <Section
+        title="Needs attention"
+        description="Customers and products whose buying pattern has changed."
+        bodyClassName=""
+        actions={
+          <Link to="/patterns" className="btn-ghost px-2 py-1 text-xs">
+            All patterns <Icon name="arrowRight" className="h-3.5 w-3.5" />
+          </Link>
+        }
+      >
+        {patterns?.summary?.statusCounts && Object.keys(patterns.summary.statusCounts).length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-3 sm:px-6">
+            <span className="mr-1 text-xs text-slate-400">Customers:</span>
+            {STATUS_ORDER.filter((status) => patterns.summary.statusCounts[status]).map((status) => (
+              <Link
+                key={status}
+                to={`/customers?status=${status}`}
+                className="inline-flex items-center gap-1 rounded-full transition hover:opacity-80"
               >
-                <CartesianGrid strokeDasharray="3 3" />
+                <StatusBadge status={status} />
+                <span className="tabular text-xs font-semibold text-slate-700">
+                  {patterns.summary.statusCounts[status]}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
 
-                <XAxis dataKey="month" />
+        {patternsError ? (
+          <div className="px-5 py-4 sm:px-6">
+            <Alert>{patternsError}</Alert>
+          </div>
+        ) : (
+          <AttentionList
+            items={patterns?.attention || []}
+            loading={patternsLoading}
+            limit={5}
+            emptyText="Every customer is ordering on their usual rhythm."
+          />
+        )}
 
-                <YAxis />
+        {!patternsLoading && patterns?.attention?.length > 5 && (
+          <Link
+            to="/patterns"
+            className="block border-t border-slate-100 px-5 py-3 text-center text-sm font-medium text-blue-700 transition hover:bg-slate-50 sm:px-6"
+          >
+            View {patterns.attention.length - 5} more
+          </Link>
+        )}
+      </Section>
+
+      {/* Monthly Revenue */}
+      <Section
+        title="Monthly Revenue"
+        description="Revenue performance over the last 12 months."
+        bodyClassName="px-2 pb-4 pt-5 sm:px-4"
+        actions={
+          revenueSummary && hasRevenue ? (
+            <dl className="flex gap-6 text-right">
+              <div>
+                <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-400">12-mo total</dt>
+                <dd className="tabular text-sm font-semibold text-slate-900">{formatINR(revenueSummary.total)}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Peak month</dt>
+                <dd className="text-sm font-semibold text-slate-900">{revenueSummary.peak.month}</dd>
+              </div>
+            </dl>
+          ) : null
+        }
+      >
+        {loading ? (
+          <div className="px-3 pb-2">
+            <Skeleton className="h-72 w-full rounded-lg" />
+          </div>
+        ) : hasRevenue ? (
+          <figure className="h-72 w-full">
+            <figcaption className="sr-only">
+              Area chart of monthly revenue for the last 12 months:{" "}
+              {analytics.monthlyRevenue.map((m) => `${m.month} ${formatINR(m.revenue)}`).join(", ")}.
+            </figcaption>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={analytics.monthlyRevenue}
+                margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#129977" stopOpacity={0.22} />
+                    <stop offset="100%" stopColor="#129977" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+
+                <CartesianGrid vertical={false} stroke="#eef0f4" />
+
+                <XAxis
+                  dataKey="month"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: "#939cad", fontSize: 12 }}
+                  dy={8}
+                />
+
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: "#939cad", fontSize: 12 }}
+                  tickFormatter={formatINRCompact}
+                  width={64}
+                />
 
                 <Tooltip
-                  formatter={(value) => [
-                    `₹${Number(value).toLocaleString("en-IN")}`,
-                    "Revenue",
-                  ]}
+                  content={<RevenueTooltip />}
+                  cursor={{ stroke: "#cdd3dd", strokeDasharray: "3 3" }}
                 />
 
-                <Line
+                <Area
                   type="monotone"
                   dataKey="revenue"
+                  name="Revenue"
+                  stroke="#087a60"
                   strokeWidth={2}
-                  dot={{ r: 3 }}
+                  fill="url(#revenueFill)"
+                  dot={false}
+                  activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff", fill: "#087a60" }}
+                  animationDuration={700}
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
-          </div>
+          </figure>
         ) : (
-          <div className="flex h-72 items-center justify-center text-sm text-slate-500">
-            No sales data yet.
-          </div>
+          <EmptyState icon="activity" title="No sales data yet" description="Record a sale to start tracking revenue trends." />
         )}
-      </div>
+      </Section>
 
-      {/* Supporting Intelligence: Top Customers & Top Products Grid */}
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        {/* Top Customers */}
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-6">
-            <h2 className="font-semibold text-slate-900">
-              Top Customers
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Customers generating the highest lifetime revenue.
-            </p>
+      {/* AI Business Insights */}
+      <section
+        aria-labelledby="ai-insights-heading"
+        className="relative overflow-hidden rounded-xl border border-mint-200/70 bg-linear-to-br from-white via-white to-mint-50/70 shadow-card"
+      >
+        <div className="flex flex-col gap-4 border-b border-mint-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ink-900 text-mint-400">
+              <Icon name="sparkles" className="h-[18px] w-[18px]" />
+            </span>
+            <div>
+              <h2 id="ai-insights-heading" className="flex items-center gap-2 text-[15px] font-semibold text-slate-900">
+                AI Business Insights
+                <span className="rounded-md bg-mint-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-mint-700">
+                  Gemini
+                </span>
+              </h2>
+              <p className="mt-0.5 text-sm text-slate-500">
+                AI-powered observations from your business data
+              </p>
+            </div>
           </div>
 
-          {loading ? (
-            <div className="py-8 text-center text-sm text-slate-500">
-              Loading customer data...
-            </div>
-          ) : analytics?.topCustomers?.length ? (
-            <div className="space-y-4">
-              {analytics.topCustomers.map((customer, index) => (
-                <div
-                  key={customer.customerId}
-                  className="flex items-center justify-between rounded-lg border border-slate-100 p-4"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
-                      {index + 1}
-                    </div>
+          <div className="flex items-center gap-3">
+            {aiGeneratedAt && !aiLoading && (
+              <p className="hidden text-xs text-slate-400 md:block">
+                Generated {aiGeneratedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={handleGenerateAIInsights}
+              disabled={aiLoading}
+              className="btn bg-ink-900 text-white shadow-sm hover:bg-ink-800"
+            >
+              <Icon
+                name={aiInsights.length ? "refresh" : "sparkles"}
+                className={`h-4 w-4 text-mint-400 ${aiLoading ? "animate-spin" : ""}`}
+              />
+              {aiLoading ? "Analyzing..." : aiInsights.length ? "Regenerate" : "Generate Insights"}
+            </button>
+          </div>
+        </div>
 
-                    <div>
-                      <p className="font-medium text-slate-900">
-                        {customer.shopName}
-                      </p>
+        <div className="p-5 sm:p-6" aria-live="polite" aria-busy={aiLoading}>
+          {aiError && (
+            <Alert>
+              <span>{aiError}</span>{" "}
+              <button type="button" onClick={handleGenerateAIInsights} className="font-medium underline underline-offset-2">
+                Try again
+              </button>
+            </Alert>
+          )}
 
-                      <p className="text-sm text-slate-500">
-                        {customer.name}
-                      </p>
-                    </div>
+          {aiLoading && (
+            <div>
+              <p className="mb-4 flex items-center gap-2 text-sm text-mint-700">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint-400 opacity-60" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-mint-500" />
+                </span>
+                Analyzing your sales, customers and products…
+              </p>
+              <div className="grid gap-3 md:grid-cols-2">
+                {[1, 2, 3, 4].map((item) => (
+                  <div key={item} className="space-y-2.5 rounded-lg border border-mint-100 bg-white p-4">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3.5 w-full" />
+                    <Skeleton className="h-3.5 w-4/5" />
                   </div>
-
-                  <div className="text-right">
-                    <p className="font-semibold text-slate-900">
-                      ₹{customer.revenue.toLocaleString("en-IN")}
-                    </p>
-
-                    <p className="text-xs text-slate-500">
-                      {customer.orders}{" "}
-                      {customer.orders === 1 ? "order" : "orders"}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="py-8 text-center text-sm text-slate-500">
-              No customer sales yet.
+          )}
+
+          {!aiLoading && aiInsights.length > 0 && (
+            <>
+              <ol className="grid gap-3 md:grid-cols-2">
+                {aiInsights.map((insight, index) => (
+                  <li
+                    key={index}
+                    className="animate-fade-in rounded-lg border border-slate-200/80 bg-white p-4 transition hover:border-mint-200"
+                    style={{ animationDelay: `${index * 60}ms` }}
+                  >
+                    <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-mint-700">
+                      <Icon name="sparkles" className="h-3.5 w-3.5" />
+                      Insight {String(index + 1).padStart(2, "0")}
+                    </p>
+                    <p className="text-sm leading-6 text-slate-700">{insight}</p>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-4 flex items-center gap-1.5 text-xs text-slate-400">
+                <Icon name="info" className="h-3.5 w-3.5" />
+                AI-generated interpretation of your data. Verify important figures against reports.
+              </p>
+            </>
+          )}
+
+          {!aiLoading && aiInsights.length === 0 && !aiError && (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-mint-200 bg-white/60 px-6 py-8 text-center">
+              <p className="max-w-md text-sm text-slate-500">
+                Generate AI insights to discover meaningful patterns in your
+                business data.
+              </p>
             </div>
           )}
         </div>
+      </section>
 
-        {/* Top Products */}
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-6">
-            <h2 className="font-semibold text-slate-900">
-              Top Products
-            </h2>
+      {/* Top Customers & Top Products */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Section
+          title="Top Customers"
+          description="Customers generating the highest lifetime revenue."
+          bodyClassName=""
+          actions={
+            <Link to="/customers" className="btn-ghost px-2 py-1 text-xs">
+              View all <Icon name="arrowRight" className="h-3.5 w-3.5" />
+            </Link>
+          }
+        >
+          <RankedList
+            items={analytics?.topCustomers}
+            loading={loading}
+            emptyIcon="users"
+            emptyTitle="No customer sales yet."
+            getKey={(c) => c.customerId}
+            getTitle={(c) => c.shopName}
+            getSubtitle={(c) => c.name}
+            getValue={(c) => formatINR(c.revenue)}
+            getMeta={(c) => `${c.orders} ${c.orders === 1 ? "order" : "orders"}`}
+            valueOf={(c) => c.revenue}
+          />
+        </Section>
 
-            <p className="mt-1 text-sm text-slate-500">
-              Products generating the highest revenue.
-            </p>
-          </div>
-
-          {loading ? (
-            <div className="py-8 text-center text-sm text-slate-500">
-              Loading product data...
-            </div>
-          ) : analytics?.topProducts?.length ? (
-            <div className="space-y-4">
-              {analytics.topProducts.map((product, index) => (
-                <div
-                  key={product.productId}
-                  className="flex items-center justify-between rounded-lg border border-slate-100 p-4"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
-                      {index + 1}
-                    </div>
-
-                    <div>
-                      <p className="font-medium text-slate-900">
-                        {product.name}
-                      </p>
-
-                      <p className="text-sm text-slate-500">
-                        {product.company}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="font-semibold text-slate-900">
-                      ₹{product.revenue.toLocaleString("en-IN")}
-                    </p>
-
-                    <p className="text-xs text-slate-500">
-                      {product.unitsSold.toLocaleString("en-IN")} units sold
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-8 text-center text-sm text-slate-500">
-              No product sales yet.
-            </div>
-          )}
-        </div>
+        <Section
+          title="Top Products"
+          description="Products generating the highest revenue."
+          bodyClassName=""
+          actions={
+            <Link to="/products" className="btn-ghost px-2 py-1 text-xs">
+              View all <Icon name="arrowRight" className="h-3.5 w-3.5" />
+            </Link>
+          }
+        >
+          <RankedList
+            items={analytics?.topProducts}
+            loading={loading}
+            emptyIcon="pill"
+            emptyTitle="No product sales yet."
+            getKey={(p) => p.productId}
+            getTitle={(p) => p.name}
+            getSubtitle={(p) => p.company}
+            getValue={(p) => formatINR(p.revenue)}
+            getMeta={(p) => `${formatNumber(p.unitsSold)} units sold`}
+            valueOf={(p) => p.revenue}
+          />
+        </Section>
       </div>
 
-      {/* AI Business Insights Section */}
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-slate-900">
-              AI Business Insights
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              AI-powered observations from your business data
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGenerateAIInsights}
-            disabled={aiLoading}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {aiLoading ? "Analyzing..." : "Generate Insights"}
-          </button>
-        </div>
-
-        {aiError && (
-          <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
-            {aiError}
-          </div>
-        )}
-
-        {!aiLoading && aiInsights.length > 0 && (
-          <div className="mt-5 grid gap-3 md:grid-cols-2">
-            {aiInsights.map((insight, index) => (
-              <div
-                key={index}
-                className="rounded-lg border border-slate-100 bg-slate-50 p-4"
-              >
-                <div className="flex gap-3">
-                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm">
-                    ✦
-                  </div>
-
-                  <p className="text-sm leading-6 text-slate-700">
-                    {insight}
-                  </p>
+      {/* Recent Activity */}
+      <Section
+        title="Recent Activity"
+        description="Your latest sales activity."
+        bodyClassName=""
+        actions={
+          <Link to="/sales" className="btn-ghost px-2 py-1 text-xs">
+            All sales <Icon name="arrowRight" className="h-3.5 w-3.5" />
+          </Link>
+        }
+      >
+        {loading ? (
+          <div className="divide-y divide-slate-100">
+            {[0, 1, 2].map((key) => (
+              <div key={key} className="flex items-center gap-4 px-6 py-4">
+                <Skeleton className="h-9 w-9 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-3.5 w-48" />
+                  <Skeleton className="h-3 w-24" />
                 </div>
+                <Skeleton className="h-3.5 w-20" />
               </div>
             ))}
-          </div>
-        )}
-
-        {!aiLoading && aiInsights.length === 0 && !aiError && (
-          <div className="mt-5 rounded-lg border border-dashed border-slate-200 p-6 text-center">
-            <p className="text-sm text-slate-500">
-              Generate AI insights to discover meaningful patterns in your
-              business data.
-            </p>
-          </div>
-        )}
-
-        {aiLoading && (
-          <div className="mt-5 grid gap-3 md:grid-cols-2">
-            {[1, 2, 3, 4].map((item) => (
-              <div
-                key={item}
-                className="h-20 animate-pulse rounded-lg bg-slate-100"
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Full Width Recent Activity */}
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-6">
-          <h2 className="font-semibold text-slate-900">
-            Recent Activity
-          </h2>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Your latest sales activity.
-          </p>
-        </div>
-
-        {loading ? (
-          <div className="py-8 text-center text-sm text-slate-500">
-            Loading recent activity...
           </div>
         ) : analytics?.recentActivity?.length ? (
-          <div className="space-y-4">
+          <ul className="divide-y divide-slate-100">
             {analytics.recentActivity.map((sale) => (
-              <div
-                key={sale.saleId}
-                className="flex items-center justify-between rounded-lg border border-slate-100 p-4"
-              >
-                <div>
-                  <p className="font-medium text-slate-900">
-                    Sale to {sale.shopName}
-                  </p>
-
-                  <p className="mt-1 text-sm text-slate-500">
-                    {sale.customerName}
-                  </p>
-                </div>
-
-                <div className="text-right">
-                  <p className="font-semibold text-slate-900">
-                    ₹{sale.totalAmount.toLocaleString("en-IN")}
-                  </p>
-
-                  <p className="text-xs text-slate-500">
-                    {new Date(sale.saleDate).toLocaleDateString("en-IN")}
-                  </p>
-                </div>
-              </div>
+              <li key={sale.saleId}>
+                <Link
+                  to={`/sales/${sale.saleId}`}
+                  className="flex items-center gap-4 px-5 py-3.5 transition hover:bg-slate-50 sm:px-6"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+                    {initials(sale.shopName)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-slate-900">
+                      Sale to {sale.shopName}
+                    </p>
+                    <p className="truncate text-xs text-slate-500">{sale.customerName}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="tabular text-sm font-semibold text-slate-900">
+                      {formatINR(sale.totalAmount)}
+                    </p>
+                    <p className="text-xs text-slate-400">{formatDate(sale.saleDate)}</p>
+                  </div>
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         ) : (
-          <div className="py-8 text-center text-sm text-slate-500">
-            No sales recorded yet.
-          </div>
+          <EmptyState compact icon="receipt" title="No sales recorded yet." />
         )}
-      </div>
+      </Section>
     </div>
   );
 };

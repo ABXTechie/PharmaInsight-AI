@@ -1,15 +1,16 @@
 import asyncHandler from "express-async-handler";
 import { generateAIResponse, generateAIResponseStream,generateAIInsights } from "../services/aiService.js";
+import { generateWeeklyBrief, generateTalkingPoints } from "../services/aiPatternService.js";
 
 export const chatWithAI = asyncHandler(async (req, res) => {
-  const { message } = req.body;
+  const { message, history } = req.body;
 
   if (!message || !message.trim()) {
     res.status(400);
     throw new Error("Message is required");
   }
 
-  const response = await generateAIResponse(message, req.user._id);
+  const response = await generateAIResponse(message, req.user._id, history);
 
   res.status(200).json({
     message: response,
@@ -17,7 +18,8 @@ export const chatWithAI = asyncHandler(async (req, res) => {
 });
 
 export const streamChatWithAI = async (req, res) => {
-  const { message } = req.body;
+  // history (optional): recent [{ role: "user" | "assistant", content }] turns
+  const { message, history } = req.body;
 
   if (!message || !message.trim()) {
     return res.status(400).json({
@@ -32,7 +34,8 @@ export const streamChatWithAI = async (req, res) => {
   try {
     const stream = generateAIResponseStream(
       message,
-      req.user._id
+      req.user._id,
+      history
     );
 
     for await (const chunk of stream) {
@@ -82,6 +85,36 @@ export const getAIInsights = async (req, res) => {
       message:
         error.message ||
         "Unable to generate AI insights.",
+    });
+  }
+};
+
+// Weekly brief: AI explanation of the current pattern signals
+export const getWeeklyBrief = async (req, res) => {
+  try {
+    const brief = await generateWeeklyBrief(req.user._id);
+
+    res.status(200).json(brief);
+  } catch (error) {
+    console.error("AI Brief Controller Error:", error);
+
+    res.status(error.statusCode || 500).json({
+      message: error.message || "Unable to generate the weekly brief.",
+    });
+  }
+};
+
+// Talking points for a call or visit with one customer
+export const getTalkingPoints = async (req, res) => {
+  try {
+    const talkingPoints = await generateTalkingPoints(req.user._id, req.params.id);
+
+    res.status(200).json(talkingPoints);
+  } catch (error) {
+    console.error("AI Talking Points Controller Error:", error);
+
+    res.status(error.statusCode || 500).json({
+      message: error.message || "Unable to generate talking points.",
     });
   }
 };
