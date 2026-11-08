@@ -8,7 +8,9 @@ export const chatWithAI = async (message) => {
   return response.data.message;
 };
 
-export const streamChatWithAI = async (message, onChunk, onComplete) => {
+// history (optional): recent [{ role: "user" | "assistant", content }] turns,
+// so follow-up questions keep their context.
+export const streamChatWithAI = async (message, onChunk, onComplete, history = []) => {
   const token = localStorage.getItem("token");
 
   const baseURL =
@@ -23,6 +25,7 @@ export const streamChatWithAI = async (message, onChunk, onComplete) => {
     },
     body: JSON.stringify({
       message,
+      history,
     }),
   });
 
@@ -84,4 +87,21 @@ export const getAIInsights = async () => {
   const response = await api.post("/ai/insights");
 
   return response.data.insights;
+};
+
+// AI explanation of this week's customer & product pattern signals
+export const getWeeklyBrief = async () => {
+  // Client-side backstop; the server gives up on the model after 30s.
+  const response = await api.post("/ai/brief", {}, { timeout: 45000 });
+
+  return response.data;
+};
+
+// Talking points for a call or visit with one customer
+export const getTalkingPoints = async (customerId) => {
+  const response = await api.post(`/ai/customers/${customerId}/talking-points`, {}, {
+    timeout: 45000,
+  });
+
+  return response.data;
 };

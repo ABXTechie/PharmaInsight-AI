@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getSales, deleteSale } from "../../services/saleService";
+import { Alert, EmptyState, PageHeader, TableSkeleton } from "../../components/ui/Primitives";
+import Icon from "../../components/ui/Icon";
 
 const Sales = () => {
   const [sales, setSales] = useState([]);
@@ -49,84 +51,70 @@ const Sales = () => {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <p className="text-slate-500">Loading sales...</p>
+      <div className="space-y-6">
+        <PageHeader eyebrow="Operations" title="Sales" description="Track and manage your sales transactions." />
+        <TableSkeleton label="Loading sales" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">
-            Sales
-          </h1>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Track and manage your sales transactions.
-          </p>
-        </div>
-
-        <Link
-          to="/sales/new"
-          className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
-        >
-          + Record Sale
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Operations"
+        title="Sales"
+        description="Track and manage your sales transactions."
+        actions={
+          <Link to="/sales/new" className="btn-primary">
+            <Icon name="plus" className="h-4 w-4" />
+            Record Sale
+          </Link>
+        }
+      />
 
       {/* Error */}
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-          {error}
-        </div>
-      )}
+      {error && <Alert>{error}</Alert>}
 
       {/* Empty State */}
       {sales.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-10 text-center">
-          <h2 className="text-lg font-medium text-slate-900">
-            No sales yet
-          </h2>
-
-          <p className="mt-2 text-sm text-slate-500">
-            Record your first sale to start tracking your business
-            performance.
-          </p>
-
-          <Link
-            to="/sales/new"
-            className="mt-5 inline-block rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            Record First Sale
-          </Link>
+        <div className="card">
+          <EmptyState
+            icon="receipt"
+            title="No sales yet"
+            description="Record your first sale to start tracking your business performance."
+            action={
+              <Link to="/sales/new" className="btn-primary">
+                <Icon name="plus" className="h-4 w-4" />
+                Record First Sale
+              </Link>
+            }
+          />
         </div>
       ) : (
         <>
           {/* Sales Table (Desktop) */}
-          <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white lg:block">
+          <div className="hidden overflow-x-auto card lg:block">
             <table className="min-w-full text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50">
+              <thead className="border-b border-slate-200 bg-slate-50/70">
                 <tr>
-                  <th className="px-6 py-4 text-left font-medium text-slate-600">
+                  <th className="th text-left">
                     Customer
                   </th>
 
-                  <th className="px-6 py-4 text-left font-medium text-slate-600">
+                  <th className="th text-left">
                     Items
                   </th>
 
-                  <th className="px-6 py-4 text-left font-medium text-slate-600">
+                  <th className="th text-right">
                     Amount
                   </th>
 
-                  <th className="px-6 py-4 text-left font-medium text-slate-600">
+                  <th className="th text-left">
                     Date
                   </th>
 
-                  <th className="px-6 py-4 text-right font-medium text-slate-600">
+                  <th className="th text-right">
                     Actions
                   </th>
                 </tr>
@@ -136,7 +124,7 @@ const Sales = () => {
                 {sales.map((sale) => (
                   <tr
                     key={sale._id}
-                    className="transition hover:bg-slate-50"
+                    className="transition-colors hover:bg-slate-50/80"
                   >
                     <td className="px-6 py-4">
                       <div>
@@ -154,7 +142,7 @@ const Sales = () => {
                       {sale.items?.length || 0}
                     </td>
 
-                    <td className="px-6 py-4 font-medium text-slate-900">
+                    <td className="px-6 py-4 text-right font-semibold text-slate-900">
                       ₹{sale.totalAmount?.toLocaleString("en-IN")}
                     </td>
 
@@ -169,6 +157,13 @@ const Sales = () => {
                           className="text-sm font-medium text-blue-600 hover:text-blue-700"
                         >
                           View
+                        </Link>
+
+                        <Link
+                          to={`/sales/${sale._id}/edit`}
+                          className="text-sm font-medium text-slate-600 hover:text-slate-900"
+                        >
+                          Edit
                         </Link>
 
                         <button
@@ -190,7 +185,7 @@ const Sales = () => {
             {sales.map((sale) => (
               <div
                 key={sale._id}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                className="card p-4"
               >
                 {/* Customer */}
                 <div>
@@ -207,7 +202,7 @@ const Sales = () => {
 
                 {/* Sale Details */}
                 <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-slate-50 p-3">
+                  <div className="rounded-lg bg-slate-50 px-3 py-2.5">
                     <p className="text-xs text-slate-500">Items</p>
 
                     <p className="mt-1 font-semibold text-slate-900">
@@ -215,7 +210,7 @@ const Sales = () => {
                     </p>
                   </div>
 
-                  <div className="rounded-lg bg-slate-50 p-3">
+                  <div className="rounded-lg bg-slate-50 px-3 py-2.5">
                     <p className="text-xs text-slate-500">Amount</p>
 
                     <p className="mt-1 font-semibold text-slate-900">
@@ -240,6 +235,13 @@ const Sales = () => {
                     className="text-sm font-medium text-blue-600 hover:text-blue-700"
                   >
                     View
+                  </Link>
+
+                  <Link
+                    to={`/sales/${sale._id}/edit`}
+                    className="text-sm font-medium text-slate-600 hover:text-slate-900"
+                  >
+                    Edit
                   </Link>
 
                   <button

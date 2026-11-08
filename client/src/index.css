@@ -1,1 +1,156 @@
 @import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   PharmaInsight AI — design tokens
+   The existing pages use Tailwind's blue / slate / red utilities.
+   Re-mapping those scales here gives every screen the new identity
+   (emerald brand, navy-tinted neutrals, muted red) without touching
+   component logic.
+------------------------------------------------------------------- */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Brand — emerald (replaces blue) */
+  --color-blue-50: #edfaf5;
+  --color-blue-100: #d3f3e6;
+  --color-blue-200: #a8e6cf;
+  --color-blue-300: #6fd2b1;
+  --color-blue-400: #36b48f;
+  --color-blue-500: #129977;
+  --color-blue-600: #087a60;
+  --color-blue-700: #06654f;
+  --color-blue-800: #075141;
+  --color-blue-900: #074236;
+  --color-blue-950: #032920;
+
+  /* Neutrals — navy-tinted gray (replaces slate) */
+  --color-slate-50: #f6f7f9;
+  --color-slate-100: #eef0f4;
+  --color-slate-200: #e3e7ed;
+  --color-slate-300: #cdd3dd;
+  --color-slate-400: #939cad;
+  --color-slate-500: #646e82;
+  --color-slate-600: #4a5468;
+  --color-slate-700: #343e52;
+  --color-slate-800: #1f2839;
+  --color-slate-900: #111827;
+  --color-slate-950: #0a101c;
+
+  /* Negative — muted red */
+  --color-red-50: #fdf4f3;
+  --color-red-100: #fbe6e4;
+  --color-red-200: #f3cdc9;
+  --color-red-300: #e8a8a1;
+  --color-red-500: #d0574d;
+  --color-red-600: #b9423a;
+  --color-red-700: #9a352f;
+
+  /* Shell — midnight navy */
+  --color-ink-950: #070d1a;
+  --color-ink-900: #0b1324;
+  --color-ink-800: #131d33;
+  --color-ink-700: #1d2944;
+  --color-ink-600: #2c3a5a;
+
+  /* AI accent — muted teal / mint */
+  --color-mint-50: #effbf9;
+  --color-mint-100: #d6f4ef;
+  --color-mint-200: #ade8df;
+  --color-mint-400: #4fc3b3;
+  --color-mint-500: #22a596;
+  --color-mint-600: #16867b;
+  --color-mint-700: #146b63;
+
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.03);
+  --shadow-pop: 0 12px 32px -8px rgb(10 16 28 / 0.18), 0 4px 8px -4px rgb(10 16 28 / 0.08);
+
+  --animate-fade-in: fade-in 0.24s ease-out both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes shimmer {
+    from { background-position: -400px 0; }
+    to { background-position: 400px 0; }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-800;
+    font-feature-settings: "cv11", "ss01", "ss03";
+  }
+
+  td, .tabular { font-variant-numeric: tabular-nums; }
+
+  :focus-visible {
+    outline: 2px solid var(--color-blue-500);
+    outline-offset: 2px;
+  }
+
+  ::selection { background: var(--color-blue-100); color: var(--color-blue-900); }
+}
+
+@utility card {
+  @apply rounded-xl border border-slate-200/80 bg-white shadow-card;
+}
+
+@utility eyebrow {
+  @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition duration-150 disabled:cursor-not-allowed disabled:opacity-60;
+}
+@utility btn-primary {
+  @apply btn bg-blue-600 text-white shadow-sm hover:bg-blue-700 active:bg-blue-800;
+}
+@utility btn-secondary {
+  @apply btn border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50;
+}
+@utility btn-ghost {
+  @apply btn text-slate-600 hover:bg-slate-100 hover:text-slate-900;
+}
+
+@utility input {
+  @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100;
+}
+
+@utility th {
+  @apply px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500;
+}
+
+@utility skeleton {
+  @apply rounded-md bg-slate-100;
+  background-image: linear-gradient(90deg, transparent 0, rgb(255 255 255 / 0.65) 50%, transparent 100%);
+  background-size: 400px 100%;
+  background-repeat: no-repeat;
+  animation: var(--animate-shimmer);
+}
+
+/* Thin, unobtrusive scrollbars inside the dark shell */
+.scroll-dark { scrollbar-width: thin; scrollbar-color: var(--color-ink-600) transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Horizontal chip rows: scrollable but without a visible scrollbar */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}

@@ -3,7 +3,9 @@ import Sale from "../models/Sale.js";
 import Customer from "../models/Customer.js";
 import Product from "../models/Product.js";
 
-const createSale = async (saleData, userId) => {
+// Validates a sale payload against the user's own customers/products and
+// computes subtotals + total on the server. Shared by create and update.
+const buildSaleFields = async (saleData, userId) => {
   const { customer, items, saleDate } = saleData;
 
   // 1. Validate customer
@@ -76,16 +78,59 @@ const createSale = async (saleData, userId) => {
     0
   );
 
-  // 8. Create the sale using authenticated user ID
-  const sale = await Sale.create({
+  return {
     customer,
     items: processedItems,
+    totalAmount,
+    saleDate,
+  };
+};
+
+const createSale = async (saleData, userId) => {
+  const { customer, items, totalAmount, saleDate } =
+    await buildSaleFields(saleData, userId);
+
+  // Create the sale using authenticated user ID
+  const sale = await Sale.create({
+    customer,
+    items,
     totalAmount,
     saleDate: saleDate || new Date(),
     createdBy: userId,
   });
 
   return sale;
+};
+
+const updateSale = async (saleId, saleData, userId) => {
+  if (!mongoose.Types.ObjectId.isValid(saleId)) {
+    throw new Error("Invalid sale ID");
+  }
+
+  const existingSale = await Sale.findOne({
+    _id: saleId,
+    createdBy: userId,
+  });
+
+  if (!existingSale) {
+    throw new Error("Sale not found");
+  }
+
+  const { customer, items, totalAmount, saleDate } =
+    await buildSaleFields(saleData, userId);
+
+  existingSale.customer = customer;
+  existingSale.items = items;
+  existingSale.totalAmount = totalAmount;
+
+  // Keep the original date unless a new one is supplied
+  if (saleDate) {
+    existingSale.saleDate = saleDate;
+  }
+
+  await existingSale.save();
+
+  return existingSale;
 };
 
 const getSales = async (userId) => {
@@ -147,4 +192,11 @@ const getCustomerSales = async (customerId, userId) => {
   return sales;
 };
 
-export { createSale, getSales, getSaleById, deleteSale, getCustomerSales };
+export {
+  createSale,
+  updateSale,
+  getSales,
+  getSaleById,
+  deleteSale,
+  getCustomerSales,
+};

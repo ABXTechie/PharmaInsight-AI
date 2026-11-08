@@ -1,11 +1,31 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Alert, PageHeader, Skeleton } from "../../components/ui/Primitives";
+import { useNavigate, useParams } from "react-router-dom";
 import { getCustomers } from "../../services/customerService";
 import { getProducts } from "../../services/productService";
-import { createSale } from "../../services/saleService";
+import {
+  createSale,
+  getSale,
+  updateSale,
+} from "../../services/saleService";
+
+// yyyy-mm-dd in the local timezone (for <input type="date">)
+const toDateInputValue = (value) => {
+  const date = new Date(value);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+};
 
 const SaleForm = () => {
   const navigate = useNavigate();
+  const { id: saleId } = useParams();
+  const isEditing = Boolean(saleId);
+  const exitPath = isEditing ? `/sales/${saleId}` : "/sales";
+
+  // Date the sale was loaded with. If unchanged it is not resent,
+  // so the original timestamp is preserved.
+  const [originalSaleDate, setOriginalSaleDate] = useState("");
 
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -40,17 +60,59 @@ const SaleForm = () => {
         setLoading(true);
         setError("");
 
-        const [customerData, productData] = await Promise.all([
+        const [customerData, productData, saleData] = await Promise.all([
           getCustomers(),
           getProducts(),
+          saleId ? getSale(saleId) : Promise.resolve(null),
         ]);
 
         setCustomers(customerData.customers);
         setProducts(productData.products);
+
+        // Prefill when editing an existing sale
+        const sale = saleData?.sale;
+
+        if (sale) {
+          setCustomer(sale.customer?._id || "");
+          setCustomerSearch(
+            sale.customer
+              ? `${sale.customer.name}${
+                  sale.customer.shopName ? ` — ${sale.customer.shopName}` : ""
+                }`
+              : ""
+          );
+
+          const loadedDate = toDateInputValue(sale.saleDate);
+          setSaleDate(loadedDate);
+          setOriginalSaleDate(loadedDate);
+
+          setItems(
+            sale.items.map((item) => ({
+              product: item.product?._id || "",
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+            }))
+          );
+
+          setProductSearch(
+            Object.fromEntries(
+              sale.items.map((item, index) => [
+                index,
+                item.product
+                  ? `${item.product.name}${
+                      item.product.company ? ` — ${item.product.company}` : ""
+                    }`
+                  : "",
+              ])
+            )
+          );
+        }
       } catch (error) {
         setError(
           error.response?.data?.message ||
-            "Failed to load customers and products"
+            (saleId
+              ? "Failed to load sale"
+              : "Failed to load customers and products")
         );
       } finally {
         setLoading(false);
@@ -58,7 +120,7 @@ const SaleForm = () => {
     };
 
     loadFormData();
-  }, []);
+  }, [saleId]);
 
   // --------------------------------
   // Items
@@ -249,13 +311,21 @@ const SaleForm = () => {
         })),
       };
 
-      await createSale(saleData);
+      if (isEditing) {
+        if (saleDate === originalSaleDate) {
+          delete saleData.saleDate;
+        }
 
-      navigate("/sales");
+        await updateSale(saleId, saleData);
+        navigate(`/sales/${saleId}`);
+      } else {
+        await createSale(saleData);
+        navigate("/sales");
+      }
     } catch (error) {
       setError(
         error.response?.data?.message ||
-          "Failed to create sale"
+          (isEditing ? "Failed to update sale" : "Failed to create sale")
       );
     } finally {
       setSaving(false);
@@ -265,37 +335,38 @@ const SaleForm = () => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6"
+      className="mx-auto max-w-4xl space-y-6"
     >
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">
-          Record Sale
-        </h1>
-
-        <p className="mt-1 text-sm text-slate-500">
-          Create a new sales transaction.
-        </p>
-      </div>
+      <PageHeader
+        backTo={exitPath}
+        backLabel={isEditing ? "Back to Sale" : "Back to Sales"}
+        eyebrow={isEditing ? "Edit" : undefined}
+        title={isEditing ? "Edit Sale" : "Record Sale"}
+        description={
+          isEditing
+            ? "Update the customer, date, products, quantities or prices."
+            : "Create a new sales transaction."
+        }
+      />
 
       {/* Loading */}
       {loading ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-6">
-          <p className="text-sm text-slate-500">
-            Loading customers and products...
-          </p>
+        <div className="card space-y-4 p-6" role="status" aria-label="Loading customers and products">
+          <Skeleton className="h-4 w-40" />
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Skeleton className="h-11 rounded-lg" />
+            <Skeleton className="h-11 rounded-lg" />
+          </div>
+          <Skeleton className="h-32 rounded-lg" />
         </div>
       ) : (
         <>
           {/* Error */}
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-              {error}
-            </div>
-          )}
+          {error && <Alert>{error}</Alert>}
 
           {/* Sale Information */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
+          <div className="card p-4 sm:p-6">
             <h2 className="text-base font-semibold text-slate-900">
               Sale Information
             </h2>
@@ -353,7 +424,7 @@ const SaleForm = () => {
                   {/* Customer Results */}
                   {openDropdown === "customer" &&
                     customerSearch.trim().length >= 1 && (
-                      <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                      <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-pop">
                         {filteredCustomers.length > 0 ? (
                           filteredCustomers.map(
                             (customerItem) => (
@@ -419,14 +490,14 @@ const SaleForm = () => {
                   onChange={(e) =>
                     setSaleDate(e.target.value)
                   }
-                  className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="input h-11 py-0"
                 />
               </div>
             </div>
           </div>
 
           {/* Sale Items */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
+          <div className="card p-4 sm:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-base font-semibold text-slate-900">
@@ -525,7 +596,7 @@ const SaleForm = () => {
                             `product-${index}` &&
                             productSearch[index]?.trim()
                               .length >= 1 && (
-                              <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                              <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-pop">
                                 {filteredProducts.length >
                                 0 ? (
                                   filteredProducts.map(
@@ -596,7 +667,7 @@ const SaleForm = () => {
                               e.target.value
                             )
                           }
-                          className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          className="input h-11 py-0"
                         />
                       </div>
 
@@ -619,7 +690,7 @@ const SaleForm = () => {
                             )
                           }
                           placeholder="₹0"
-                          className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          className="input h-11 py-0"
                         />
                       </div>
 
@@ -657,28 +728,26 @@ const SaleForm = () => {
             </div>
           </div>
 
-          {/* Sale Total */}
-          <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          {/* Sale Total + Actions */}
+          <div className="sticky bottom-4 z-20 flex flex-col gap-4 rounded-xl border border-slate-200 bg-white/95 p-4 shadow-pop backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div>
-              <p className="text-sm text-slate-500">
+              <p className="eyebrow">
                 Total Amount
               </p>
 
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="tabular mt-1 text-2xl font-semibold tracking-tight text-slate-900">
+                ₹{totalAmount.toLocaleString("en-IN")}
+              </p>
+
+              <p className="mt-0.5 text-xs text-slate-400">
                 Calculated from all sale items
               </p>
             </div>
 
-            <p className="text-2xl font-semibold text-slate-900">
-              ₹{totalAmount.toLocaleString("en-IN")}
-            </p>
-          </div>
-
-          {/* Actions */}
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <button
               type="button"
-              onClick={() => navigate("/sales")}
+              onClick={() => navigate(exitPath)}
               className="w-full rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 active:bg-slate-100 sm:w-auto"
             >
               Cancel
@@ -689,8 +758,15 @@ const SaleForm = () => {
               disabled={saving || loading}
               className="w-full rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 active:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
-              {saving ? "Recording..." : "Record Sale"}
+              {isEditing
+                ? saving
+                  ? "Saving..."
+                  : "Save Changes"
+                : saving
+                  ? "Recording..."
+                  : "Record Sale"}
             </button>
+          </div>
           </div>
         </>
       )}

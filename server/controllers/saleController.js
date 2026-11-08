@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler";
 import {
   createSale as createSaleService,
+  updateSale as updateSaleService,
   getSales as getSalesService,
   getSaleById,
   deleteSale as deleteSaleService,
@@ -12,6 +13,19 @@ const createSale = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     message: "Sale created successfully",
+    sale,
+  });
+});
+
+const updateSale = asyncHandler(async (req, res) => {
+  const sale = await updateSaleService(
+    req.params.id,
+    req.body,
+    req.user._id
+  );
+
+  res.status(200).json({
+    message: "Sale updated successfully",
     sale,
   });
 });
@@ -51,4 +65,11 @@ const getCustomerSales = asyncHandler(async (req, res) => {
   });
 });
 
-export { createSale, getSales, getSale, deleteSale, getCustomerSales };
+export {
+  createSale,
+  updateSale,
+  getSales,
+  getSale,
+  deleteSale,
+  getCustomerSales,
+};

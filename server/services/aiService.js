@@ -1,10 +1,168 @@
 import "dotenv/config";
 import { GoogleGenAI } from "@google/genai";
 import { getDashboardAnalytics } from "./analyticsService.js";
+import { getPatternInsights } from "./patternService.js";
 
-const ai = new GoogleGenAI({
+export const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
+
+export const AI_MODEL = "gemini-3.5-flash-lite";
+
+// Map SDK errors to the user-facing messages the app already uses.
+export const toAIError = (error, subject = "AI") => {
+  if (error?.name === "TimeoutError" || error?.name === "AbortError") {
+    const timeoutError = new Error(`${subject} took too long to respond. Please try again.`);
+    timeoutError.statusCode = 504;
+    return timeoutError;
+  }
+
+  if (
+    error?.status === 429 ||
+    error?.code === 429 ||
+    error?.message?.includes("RESOURCE_EXHAUSTED")
+  ) {
+    const quotaError = new Error(
+      `${subject} is temporarily unavailable because the AI usage limit has been reached. Please try again later.`
+    );
+    quotaError.statusCode = 429;
+    return quotaError;
+  }
+
+  const aiError = new Error(`${subject} is temporarily unavailable. Please try again later.`);
+  aiError.statusCode = 503;
+  return aiError;
+};
+
+// Human-readable figures so the model quotes them naturally.
+export const inr = (value) =>
+  value === null || value === undefined
+    ? null
+    : `₹${Math.round(Number(value) || 0).toLocaleString("en-IN")}`;
+
+export const readableDate = (value) =>
+  value
+    ? new Date(value).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+    : null;
+
+/*
+ * Compact view of the pattern signals for prompts. The numbers are computed
+ * by patternService (deterministic); the model only explains them.
+ */
+export const buildPatternContext = (patterns, { includeIds = false, maxCustomers = 60 } = {}) => {
+  const withId = (id, obj) => (includeIds ? { id, ...obj } : obj);
+
+  return {
+    customerStatusCounts: patterns.summary.statusCounts,
+    statusMeaning: {
+      at_risk: "well past their usual ordering gap, or overdue and buying much less",
+      slipping: "overdue for an order, or buying noticeably less over recent orders",
+      lost: "no order for a long time compared with their rhythm",
+      growing: "buying noticeably more over recent orders",
+      steady: "ordering on their usual rhythm",
+      new: "first ordered recently",
+      insufficient_history: "fewer than 3 order days; no pattern yet",
+    },
+    needsAttention: patterns.attention.slice(0, 20).map((a) => ({
+      type: a.type,
+      tone: a.tone,
+      severity: a.severity,
+      title: a.title,
+      detail: a.message,
+      ...(includeIds && a.customerId ? { customerId: a.customerId } : {}),
+      ...(includeIds && a.productId ? { productId: a.productId } : {}),
+    })),
+    customers: patterns.customers.slice(0, maxCustomers).map((c) =>
+      withId(c.customerId, {
+        shop: c.shopName || c.name,
+        owner: c.name,
+        status: c.status,
+        orders: c.orders,
+        usualGapDays: c.usualGapDays,
+        daysSinceLastOrder: c.daysSinceLastOrder,
+        overdue: c.overdue,
+        lastOrderDate: readableDate(c.lastOrder),
+        lifetimeRevenue: inr(c.lifetimeRevenue),
+        spendingTrendPercent: c.trend.changePercent,
+        spendingRecentPerMonth: inr(c.trend.recentMonthlyRate),
+        spendingBeforePerMonth: inr(c.trend.previousMonthlyRate),
+        usuallyBuys: c.usuallyBuys.map((u) => u.name),
+        stoppedBuying: c.stoppedBuying.map((x) => x.name),
+        pitchNext: c.pitchNext.map((x) => x.name),
+      })
+    ),
+    products: patterns.products.map((x) =>
+      withId(x.productId, {
+        name: x.name,
+        company: x.company,
+        trend: x.trend.status,
+        unitsChangePercent30d: x.trend.changePercent,
+        units30d: x.trend.unitsRecent,
+        customers: x.customerCount,
+        reachPercent: x.reachPercent,
+        stoppedBy: x.lapsedCustomers.map((l) => l.shopName),
+        neverOrderedByActiveCustomers: x.opportunities.map((o) => o.shopName),
+        priceRange: x.price?.flagged ? `₹${x.price.min}–₹${x.price.max}` : undefined,
+      })
+    ),
+  };
+};
+
+// Validated recent conversation → Gemini turns (oldest first).
+const MAX_HISTORY_TURNS = 12;
+const MAX_TURN_CHARS = 4000;
+
+export const sanitizeHistory = (history) => {
+  if (!Array.isArray(history)) return [];
+
+  return history
+    .filter(
+      (turn) =>
+        turn &&
+        (turn.role === "user" || turn.role === "assistant") &&
+        typeof turn.content === "string" &&
+        turn.content.trim()
+    )
+    .slice(-MAX_HISTORY_TURNS)
+    .map((turn) => ({
+      role: turn.role === "assistant" ? "model" : "user",
+      parts: [{ text: turn.content.slice(0, MAX_TURN_CHARS) }],
+    }));
+};
+
+const buildChatContents = async (message, userId, history) => {
+  const [analytics, patterns] = await Promise.all([
+    getDashboardAnalytics(userId),
+    getPatternInsights(userId),
+  ]);
+
+  const businessContext = {
+    revenueToday: analytics.revenueToday,
+    revenueThisMonth: analytics.revenueThisMonth,
+    totalSales: analytics.totalSales,
+    customerCount: analytics.customerCount,
+    productCount: analytics.productCount,
+    averageOrderValue: analytics.averageOrderValue,
+    monthlyRevenue: analytics.monthlyRevenue,
+    topCustomers: analytics.topCustomers,
+    topProducts: analytics.topProducts,
+    recentActivity: analytics.recentActivity,
+  };
+
+  const prompt = `
+BUSINESS DATA:
+${JSON.stringify(businessContext, null, 2)}
+
+PATTERN SIGNALS (computed from recorded sales):
+${JSON.stringify(buildPatternContext(patterns))}
+
+USER QUESTION:
+${message}
+`;
+
+  // Fresh data rides on the latest turn; earlier turns give conversational context.
+  return [...sanitizeHistory(history), { role: "user", parts: [{ text: prompt }] }];
+};
 
 const SYSTEM_INSTRUCTION = `
 You are PharmaInsight AI, an intelligent sales and business analytics assistant for a pharmaceutical business.
@@ -100,36 +258,36 @@ Top Products
 just because the user started a conversation.
 These metrics should only be shown when the user's request calls for them.
 The user's message should determine the response.
+
+9. Customer & Product Patterns
+PATTERN SIGNALS describe each customer's ordering rhythm (usualGapDays,
+daysSinceLastOrder, overdue), spending trend over their recent orders, status,
+the products they usually buy, products they stopped buying, and products to
+pitch; and for each product its 30-day trend, reach, who stopped buying it and
+which active customers never ordered it.
+Use them for questions about retention, which customers to call or visit,
+who is ordering less, what a customer usually takes, which customers use a
+product, what is doing well or badly, and what to pitch to whom.
+Quote these figures exactly; do not recompute or extrapolate them. A status is
+a rule-based signal, not a certainty — phrase it as "hasn't ordered in 28 days,
+usually every 7" rather than "they have left".
+
+10. Conversation
+Earlier turns are included for context. Resolve follow-ups ("and which of
+those…", "what about her?") against them, but always answer from the latest
+BUSINESS DATA and PATTERN SIGNALS.
+If a follow-up refers to someone or something that is not in the earlier
+turns, ask which customer or product they mean instead of guessing, and never
+claim the user said something they did not.
 `;
 
-export const generateAIResponse = async (message, userId) => {
-  const analytics = await getDashboardAnalytics(userId);
-
-  const businessContext = {
-    revenueToday: analytics.revenueToday,
-    revenueThisMonth: analytics.revenueThisMonth,
-    totalSales: analytics.totalSales,
-    customerCount: analytics.customerCount,
-    productCount: analytics.productCount,
-    averageOrderValue: analytics.averageOrderValue,
-    monthlyRevenue: analytics.monthlyRevenue,
-    topCustomers: analytics.topCustomers,
-    topProducts: analytics.topProducts,
-    recentActivity: analytics.recentActivity,
-  };
-
-  const prompt = `
-BUSINESS DATA:
-${JSON.stringify(businessContext, null, 2)}
-
-USER QUESTION:
-${message}
-`;
+export const generateAIResponse = async (message, userId, history = []) => {
+  const contents = await buildChatContents(message, userId, history);
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash-lite",
-      contents: prompt,
+      model: AI_MODEL,
+      contents,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
       },
@@ -159,34 +317,13 @@ ${message}
   }
 };
 
-export const generateAIResponseStream = async function* (message, userId) {
-  const analytics = await getDashboardAnalytics(userId);
-
-  const businessContext = {
-    revenueToday: analytics.revenueToday,
-    revenueThisMonth: analytics.revenueThisMonth,
-    totalSales: analytics.totalSales,
-    customerCount: analytics.customerCount,
-    productCount: analytics.productCount,
-    averageOrderValue: analytics.averageOrderValue,
-    monthlyRevenue: analytics.monthlyRevenue,
-    topCustomers: analytics.topCustomers,
-    topProducts: analytics.topProducts,
-    recentActivity: analytics.recentActivity,
-  };
-
-  const prompt = `
-BUSINESS DATA:
-${JSON.stringify(businessContext, null, 2)}
-
-USER QUESTION:
-${message}
-`;
+export const generateAIResponseStream = async function* (message, userId, history = []) {
+  const contents = await buildChatContents(message, userId, history);
 
   try {
     const response = await ai.models.generateContentStream({
-      model: "gemini-3.5-flash-lite",
-      contents: prompt,
+      model: AI_MODEL,
+      contents,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
       },
