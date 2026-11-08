@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { getProduct } from "../../services/productService";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import usePatterns from "../../hooks/usePatterns";
 import Icon from "../../components/ui/Icon";
@@ -38,6 +40,28 @@ const ProductDetails = () => {
   const alerts = (patterns?.attention || []).filter((a) => a.productId === id && !a.customerId);
   const buyingCustomers = patterns?.summary?.buyingCustomers || 0;
 
+  // If pattern data isn't available (e.g. older server), still show the product.
+  const needsFallback = !loading && !product;
+  const [basicProduct, setBasicProduct] = useState(null);
+  const [basicError, setBasicError] = useState("");
+
+  useEffect(() => {
+    if (!needsFallback) return undefined;
+    let cancelled = false;
+
+    getProduct(id)
+      .then((data) => {
+        if (!cancelled) setBasicProduct(data.product);
+      })
+      .catch((err) => {
+        if (!cancelled) setBasicError(err.response?.data?.message || "Product not found.");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [needsFallback, id]);
+
   if (loading) {
     return (
       <div className="space-y-6" role="status" aria-label="Loading product">
@@ -53,11 +77,43 @@ const ProductDetails = () => {
     );
   }
 
-  if (error || !product) {
+  if (!product) {
+    if (basicError) {
+      return (
+        <div>
+          <PageHeader backTo="/products" backLabel="Back to Products" title="Product" />
+          <Alert>{basicError}</Alert>
+        </div>
+      );
+    }
+
+    if (!basicProduct) {
+      return (
+        <div className="space-y-6" role="status" aria-label="Loading product">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-40 rounded-xl" />
+        </div>
+      );
+    }
+
     return (
-      <div>
-        <PageHeader backTo="/products" backLabel="Back to Products" title="Product" />
-        <Alert>{error || "Product not found."}</Alert>
+      <div className="space-y-6">
+        <PageHeader
+          backTo="/products"
+          backLabel="Back to Products"
+          eyebrow={basicProduct.category}
+          title={basicProduct.name}
+          description={basicProduct.company}
+        />
+        <Alert tone={error ? "error" : "info"}>
+          {error || "Sales insights for this product aren't available yet."}
+        </Alert>
+        {basicProduct.description && (
+          <Section title="Description">
+            <p className="text-sm text-slate-600">{basicProduct.description}</p>
+          </Section>
+        )}
       </div>
     );
   }

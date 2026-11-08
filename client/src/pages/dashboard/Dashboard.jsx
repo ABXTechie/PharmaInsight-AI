@@ -172,6 +172,7 @@ const Dashboard = () => {
       value: formatINR(analytics?.averageOrderValue),
       icon: "trend",
       accent: "brand",
+      hint: "This month",
     },
     {
       label: "Total Sales",
